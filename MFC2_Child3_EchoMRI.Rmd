@@ -1,0 +1,1319 @@
+---
+title: "Child Doc 3: Body Composition Data"
+author: "Grace Rubin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+<!-- This is the child document containing data visualizations and statistical analyses for MFC2 Echo MRI (Body Composition) Data -->
+
+```{r setup child doc 3, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  collapse = TRUE,
+  fig.height = 3, 
+  fig.width = 4, 
+  fig.align = 'center'
+)
+
+# loading packages
+library(ggpubr)
+library(nlme)
+library(tidyverse)
+library(here)
+library(knitr)
+library(DT)
+library(lme4)
+library(lmerTest) 
+library(ggpmisc)
+library(RColorBrewer)
+```
+
+```{r Reading data child doc 3, include=FALSE}
+# So each child document functions properly independently, I will reload redundant data frames in each.
+
+# Loading in metadata
+Metadata <- read.csv("HEB114_Metadata.csv")
+
+# Loading in echo MRI data
+EchoMRI <- read.csv("HEB114_Body_Composition.csv")
+
+# Loading in weight data
+Weight <- read.csv("HEB114_Daily_Weight_Simplified.csv")
+      # A little data cleaning:
+      Weight$Day <- trimws(Weight$Day) # this trims off any hanging spaces at the ends of our days
+      Weight$Day <- factor(Weight$Day, levels = c("D-4", "D-3", "D-2", "D-1", 
+                                                  "D0", "D2", "D3", "D4", "D5",
+                                                  "D6", "D7", "D8")) # this orders our days
+
+# Loading in the corresponding weight data for my echo MRI days:      
+Echo_Weights <- read.csv("MFC2_EchoMRI_Mouse_Weights_csv.csv")
+
+# Loading in endpoint data
+Endpoint <- read.csv("HEB114_Endpoint.csv")
+
+# Data cleaning
+    # Change Mice to characters
+      Metadata$Mouse <- as.character(Metadata$Mouse)
+      Weight$Mouse <- as.character(Weight$Mouse)
+      EchoMRI$Mouse <- as.character(EchoMRI$Mouse)
+      Endpoint$Mouse <- as.character(Endpoint$Mouse)
+      
+# I'll need a key that combines mouse ID with TimePoint
+Echo_Weights <- Echo_Weights %>% 
+  mutate(Mouse_TimePoint = paste(Echo_Weights$Mouse, Echo_Weights$Timepoint, sep="_", collapse = NULL))
+
+EchoMRI <- EchoMRI %>% 
+  mutate(Mouse_TimePoint = paste(EchoMRI$Mouse, EchoMRI$Timepoint, sep="_", collapse = NULL))
+
+# The data frames are the same # of rows, so I'm going to use full_join()
+EchoMRI_complete <- Echo_Weights %>% 
+  select(Weight:Mouse_TimePoint) %>% # grabbing just what I need
+  full_join(EchoMRI, by = "Mouse_TimePoint")
+
+# Renaming the old columns and making new percentage columns with the same names using rename() and mutate()
+EchoMRI_complete <- EchoMRI_complete %>% 
+  rename(Fat = Fat_percentage) %>% 
+  rename(Lean_mass = Lean_mass_percentage) %>% 
+  rename(Free_water = Free_water_percentage) %>% 
+  rename(Total_water = Total_water_percentage) %>% 
+  mutate(Fat_percentage = (Fat / Weight)*100) %>% 
+  mutate(Free_water_percentage = (Free_water / Weight)*100) %>% 
+  mutate(Total_water_percentage = (Total_water / Weight)*100)
+
+# oops forgot lean mass percentage do that now
+EchoMRI_complete <- EchoMRI_complete %>% 
+  mutate(Lean_mass_percentage = (Lean_mass / Weight)*100)
+
+# Summary of endpoint body comp in the dif groups
+EchoMRI_complete_summary <- EchoMRI_complete %>% 
+  filter(Timepoint != "Baseline") %>%
+  group_by(Group_Total) %>% 
+  summarize(Average_fat_percentage = mean(Fat_percentage),
+            Average_lean_mass_percentage = mean(Lean_mass_percentage),
+            Average_free_water_percentage = mean(Free_water_percentage),
+            Average_total_water_percentage = mean(Total_water_percentage),
+            Average_fat = mean(Fat),
+            Average_lean_mass = mean(Lean_mass),
+            Average_free_water = mean(Free_water),
+            Average_total_water = mean(Total_water)
+  )
+
+# to do paired t-tests, I need to rearrange the data frame EchoMRI_complete so that each mouse goes baseline then endpoint
+EchoMRI_complete <- EchoMRI_complete %>%
+  arrange(Mouse, Day)
+
+# For future line graphs I'll need to factor my days
+EchoMRI_complete$Day <- factor(EchoMRI_complete$Day, levels = c("D-3", "D5")) # factoring
+
+# assigning colors:
+body_comp_colors <- scale_color_manual(values = c("PGH" = "plum3", "PL" = "aquamarine3", "Saline" = "goldenrod"))
+
+# I like these for abx vs non abx
+c2 = scale_color_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+
+f2 = scale_fill_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+```
+## 2.b. Overview
+
+The EchoMRI produces the following measurements:
+
+  1. Fat mass
+  2. Lean mass
+  3. Total water
+  4. Free water
+
+These are recorded as absolute masses in grams, but I have also converted them to percentage of body mass for an additional way to assess body composition. 
+
+Similar to the metabolic tests, each mouse was measured at baseline and endpoint. Therefore, we can assess the effects of hormone treatment via:
+
+  + Intragroup / intramouse longitudinal changes from baseline to endpoint
+  + Cross-sectional differences between groups at endpoint 
+    + We can compare endpoint body comp features in hormone-exposed mice with results in saline-exposed mice within the *same microbiome condition* (Non-ABX or ABX) to quantify the effects of each hormone on body comp under a given gut microbiome environment. 
+    + We can compare body comp features in mice exposed to the same hormone but under *different microbiome conditions* to isolate any additive or interaction effects of hormones and gut microbiome presence on glucose homeostasis. 
+
+***
+
+## 2.b.i. Intragroup Longitudinal Changes in Body Comp
+
+Longitudinal changes can be visually represented in a few dif ways:
+
+  + Box plots
+  + Stacked bar graphs (particularly for percentages)
+  + Line graphs
+
+### Lean mass (g)
+```{r Longitudinal changes in lean mass 1, fig.height = 8, fig.width = 8}
+# BOX PLOT:
+lean_mass_absolute_longitud_box <- 
+  ggplot(data = EchoMRI_complete, aes(x = Timepoint, y = Lean_mass)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Timepoint), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  scale_color_manual(values = c("slateblue1", "slateblue4")) +
+  facet_wrap("Group_Total") +
+  labs(title = "Lean Mass Over Time Across Groups",
+       x = "Time Point", y = "Lean Mass (g)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(
+      comparisons = list(c("Baseline", "Endpoint")), # Compare specific levels
+      method = "t.test",
+      paired = TRUE, 
+      label = "p.format" 
+  )
+lean_mass_absolute_longitud_box
+
+```
+
+```{r Longitudinal changes in lean mass 2}
+# LINE GRAPH:
+# all lines
+lean_mass_absolute_longitud_line1 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Lean_mass, 
+        color = Hormone, group = Mouse)) + 
+        geom_line(alpha = 0.5) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Lean Mass Over Time Across Groups",
+               x = "Time Point", y = "Lean Mass (g)")
+lean_mass_absolute_longitud_line1
+
+# with error bars
+lean_mass_absolute_longitud_line2 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Lean_mass, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Lean Mass Over Time Across Groups",
+               x = "Time Point", y = "Lean Mass (g)")
+lean_mass_absolute_longitud_line2
+
+# Grouped differently
+lean_mass_absolute_longitud_line3 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Lean_mass, 
+        color = ABX)) + 
+        stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = ABX), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        c2 +
+        facet_wrap("Hormone") +
+        labs(title = "Lean Mass Over Time Across Groups",
+               x = "Time Point", y = "Lean Mass (g)")
+lean_mass_absolute_longitud_line3
+
+```
+
+NOTES: 
+
+- Because the mice are getting older, we might expect absolute lean mass to increase across the board. That's why looking at % can be useful too.
+
+- There are some outliers I could consider taking out. I didn't for now...
+
+### Lean mass (%)
+```{r Longitudinal changes in lean mass percentage 1, fig.height = 8, fig.width = 8}
+# BOX PLOT:
+lean_mass_percentage_longitud_box <- 
+  ggplot(data = EchoMRI_complete, aes(x = Timepoint, y = Lean_mass_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Timepoint), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  scale_color_manual(values = c("slateblue1", "slateblue4")) +
+  facet_wrap("Group_Total") +
+  labs(title = "Lean Mass % Over Time Across Groups",
+       x = "Time Point", y = "Lean Mass (%)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(
+       comparisons = list(c("Baseline", "Endpoint")), # Compare specific levels
+       method = "t.test",
+       paired = TRUE, 
+       label = "p.format" 
+  )
+lean_mass_percentage_longitud_box
+```
+
+```{r Longitudinal changes in lean mass percentage 2}
+# LINE GRAPH:
+# all lines
+lean_mass_percentage_longitud_line1 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Lean_mass_percentage, 
+        color = Hormone, group = Mouse)) + 
+        geom_line(alpha = 0.5) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Lean Mass % Over Time \nAcross Groups",
+               x = "Time Point", y = "Lean Mass %")
+lean_mass_percentage_longitud_line1
+
+# with error bars -- outlier included
+lean_mass_percentage_longitud_line2 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Lean_mass_percentage, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Lean Mass % Over Time \nAcross Groups",
+               x = "Time Point", y = "Lean Mass (%)")
+lean_mass_percentage_longitud_line2
+
+# with error bars -- outlier excluded
+EchoMRI_complete_no513 <- EchoMRI_complete %>% 
+                filter(Mouse != "513") # filtering out the outlier
+
+lean_mass_percentage_longitud_line3 <- 
+  ggplot(data = EchoMRI_complete_no513, aes(x = Day, y = Lean_mass_percentage, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Lean Mass % Over Time \nAcross Groups \n(Outlier Excluded)",
+               x = "Time Point", y = "Lean Mass (%)")
+lean_mass_percentage_longitud_line3
+
+# Grouped differently
+lean_mass_percentage_longitud_line4 <- 
+  ggplot(data = EchoMRI_complete_no513, aes(x = Day, y = Lean_mass_percentage, 
+        color = ABX)) + 
+        stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = ABX), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        c2 +
+        facet_wrap("Hormone") +
+        labs(title = "Lean Mass % Over Time \nAcross Groups \n(Outlier Excluded)",
+               x = "Time Point", y = "Lean Mass (%)")
+lean_mass_percentage_longitud_line4
+```
+
+### Fat mass (g)
+```{r Longitudinal changes in fat mass 1, fig.height = 8, fig.width = 8}
+# BOX PLOT:
+fat_mass_absolute_longitud_box <- 
+  ggplot(data = EchoMRI_complete, aes(x = Timepoint, y = Fat)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Timepoint), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  scale_color_manual(values = c("orchid1", "orchid4")) +
+  facet_wrap("Group_Total") +
+  labs(title = "Fat Mass Over Time Across Groups",
+       x = "Time Point", y = "Fat Mass (g)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(
+      comparisons = list(c("Baseline", "Endpoint")), # Compare specific levels
+      method = "t.test",
+      paired = TRUE, 
+      label = "p.format" 
+  )
+fat_mass_absolute_longitud_box
+```
+
+```{r Longitudinal changes in fat mass 2}
+# LINE GRAPH:
+# all lines
+fat_mass_absolute_longitud_line1 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Fat, 
+        color = Hormone, group = Mouse)) + 
+        geom_line(alpha = 0.5) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Fat Mass Over Time Across Groups",
+               x = "Time Point", y = "Fat Mass (g)")
+fat_mass_absolute_longitud_line1
+
+# with error bars
+fat_mass_absolute_longitud_line2 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Fat, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Fat Mass Over Time Across Groups",
+               x = "Time Point", y = "Fat Mass (g)")
+fat_mass_absolute_longitud_line2
+
+# grouped differently
+fat_mass_absolute_longitud_line3 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Fat, 
+        color = ABX)) + 
+        stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = ABX), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        c2 +
+        facet_wrap("Hormone") +
+        labs(title = "Fat Mass Over Time Across Groups",
+               x = "Time Point", y = "Fat Mass (g)")
+fat_mass_absolute_longitud_line3
+```
+
+### Fat mass (%)
+```{r Longitudinal changes in fat mass percentage 1, fig.height = 8, fig.width = 8}
+# BOX PLOT:
+fat_mass_percentage_longitud_box <- 
+  ggplot(data = EchoMRI_complete, aes(x = Timepoint, y = Fat_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Timepoint), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  scale_color_manual(values = c("orchid1", "orchid4")) +
+  facet_wrap("Group_Total") +
+  labs(title = "Fat Mass % Over Time Across Groups",
+       x = "Time Point", y = "Fat Mass (%)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(
+       comparisons = list(c("Baseline", "Endpoint")), # Compare specific levels
+       method = "t.test",
+       paired = TRUE, 
+       label = "p.format" 
+  )
+fat_mass_percentage_longitud_box
+```
+
+```{r Longitudinal changes in fat mass percentage 2}
+# LINE GRAPH:
+# all lines
+fat_mass_percentage_longitud_line1 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Fat_percentage, 
+        color = Hormone, group = Mouse)) + 
+        geom_line(alpha = 0.5) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Fat Mass % Over Time \nAcross Groups",
+               x = "Time Point", y = "Fat Mass %")
+fat_mass_percentage_longitud_line1
+
+# with error bars
+fat_mass_percentage_longitud_line2 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Fat_percentage, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Fat Mass % Over Time \nAcross Groups",
+               x = "Time Point", y = "Fat Mass (%)")
+fat_mass_percentage_longitud_line2
+
+# Grouped differently
+fat_mass_percentage_longitud_line4 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Fat_percentage, 
+        color = ABX)) + 
+        stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = ABX), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        c2 +
+        facet_wrap("Hormone") +
+        labs(title = "Fat Mass % Over Time \nAcross Groups",
+               x = "Time Point", y = "Fat Mass (%)")
+fat_mass_percentage_longitud_line4
+```
+
+### Total water (g)
+```{r Longitudinal changes in total water 1, fig.height = 8, fig.width = 8}
+# BOX PLOT:
+twater_mass_absolute_longitud_box <- 
+  ggplot(data = EchoMRI_complete, aes(x = Timepoint, y = Total_water)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Timepoint), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  scale_color_manual(values = c("turquoise1", "turquoise4")) +
+  facet_wrap("Group_Total") +
+  labs(title = "Total Water Over Time Across Groups",
+       x = "Time Point", y = "Total Water (g)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(
+      comparisons = list(c("Baseline", "Endpoint")), # Compare specific levels
+      method = "t.test",
+      paired = TRUE, 
+      label = "p.format" 
+  )
+twater_mass_absolute_longitud_box
+```
+
+```{r Longitudinal changes in total water 2}
+# LINE GRAPH:
+# all lines
+twater_mass_absolute_longitud_line1 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Total_water, 
+        color = Hormone, group = Mouse)) + 
+        geom_line(alpha = 0.5) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Total Water Over Time Across Groups",
+               x = "Time Point", y = "Total Water (g)")
+twater_mass_absolute_longitud_line1
+
+# with error bars
+twater_mass_absolute_longitud_line2 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Total_water, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Total Water Over Time Across Groups",
+               x = "Time Point", y = "Total Water (g)")
+twater_mass_absolute_longitud_line2
+
+# grouped differently
+twater_mass_absolute_longitud_line3 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Total_water, 
+        color = ABX)) + 
+        stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = ABX), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        c2 +
+        facet_wrap("Hormone") +
+        labs(title = "Total Water Over Time Across Groups",
+               x = "Time Point", y = "Total Water (g)")
+twater_mass_absolute_longitud_line3
+```
+
+### Total water (%)
+```{r Longitudinal changes in total water percentage 1, fig.height = 8, fig.width = 8}
+# BOX PLOT:
+twater_mass_percentage_longitud_box <- 
+  ggplot(data = EchoMRI_complete, aes(x = Timepoint, y = Total_water_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Timepoint), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  scale_color_manual(values = c("turquoise1", "turquoise4")) +
+  facet_wrap("Group_Total") +
+  labs(title = "Total Water % Over Time \nAcross Groups",
+       x = "Time Point", y = "Total Water (%)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(
+       comparisons = list(c("Baseline", "Endpoint")), # Compare specific levels
+       method = "t.test",
+       paired = TRUE, 
+       label = "p.format" 
+  )
+twater_mass_percentage_longitud_box
+```
+
+```{r Longitudinal changes in total water percentage 2}
+# LINE GRAPH:
+# all lines
+twater_mass_percentage_longitud_line1 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Total_water_percentage, 
+        color = Hormone, group = Mouse)) + 
+        geom_line(alpha = 0.5) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Total Water % Over Time \nAcross Groups",
+               x = "Time Point", y = "Total Water %")
+twater_mass_percentage_longitud_line1
+
+# with error bars
+twater_mass_percentage_longitud_line2 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Total_water_percentage, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Total Water % Over Time \nAcross Groups",
+               x = "Time Point", y = "Total Water (%)")
+twater_mass_percentage_longitud_line2
+
+# Grouped differently
+twater_mass_percentage_longitud_line4 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Total_water_percentage, 
+        color = ABX)) + 
+        stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = ABX), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        c2 +
+        facet_wrap("Hormone") +
+        labs(title = "Total Water % Over Time \nAcross Groups",
+               x = "Time Point", y = "Total Water (%)")
+twater_mass_percentage_longitud_line4
+```
+
+### Free water (g)
+```{r Longitudinal changes in free water 1, fig.height = 8, fig.width = 8}
+# BOX PLOT:
+fwater_mass_absolute_longitud_box <- 
+  ggplot(data = EchoMRI_complete, aes(x = Timepoint, y = Free_water)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Timepoint), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  scale_color_manual(values = c("turquoise1", "turquoise4")) +
+  facet_wrap("Group_Total") +
+  labs(title = "Free Water Over Time Across Groups",
+       x = "Time Point", y = "Free Water (g)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(
+      comparisons = list(c("Baseline", "Endpoint")), # Compare specific levels
+      method = "t.test",
+      paired = TRUE, 
+      label = "p.format" 
+  )
+fwater_mass_absolute_longitud_box
+```
+
+```{r Longitudinal changes in free water 2}
+# LINE GRAPH:
+# all lines
+fwater_mass_absolute_longitud_line1 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Free_water, 
+        color = Hormone, group = Mouse)) + 
+        geom_line(alpha = 0.5) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Free Water Over Time \nAcross Groups",
+               x = "Time Point", y = "Free Water (g)")
+fwater_mass_absolute_longitud_line1
+
+# with error bars
+fwater_mass_absolute_longitud_line2 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Free_water, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Free Water Over Time\n Across Groups",
+               x = "Time Point", y = "Free Water (g)")
+fwater_mass_absolute_longitud_line2
+
+# grouped differently
+fwater_mass_absolute_longitud_line3 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Free_water, 
+        color = ABX)) + 
+        stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = ABX), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        c2 +
+        facet_wrap("Hormone") +
+        labs(title = "Free Water Over Time\n Across Groups",
+               x = "Time Point", y = "Free Water (g)")
+fwater_mass_absolute_longitud_line3
+```
+
+### Free water (%)
+```{r Longitudinal changes in free water percentage 1, fig.height = 8, fig.width = 8}
+# BOX PLOT:
+twater_mass_percentage_longitud_box <- 
+  ggplot(data = EchoMRI_complete, aes(x = Timepoint, y = Total_water_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Timepoint), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  scale_color_manual(values = c("palegreen1", "palegreen4")) +
+  facet_wrap("Group_Total") +
+  labs(title = "Total Water % Over Time \nAcross Groups",
+       x = "Time Point", y = "Total Water (%)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(
+       comparisons = list(c("Baseline", "Endpoint")), # Compare specific levels
+       method = "t.test",
+       paired = TRUE, 
+       label = "p.format" 
+  )
+twater_mass_percentage_longitud_box
+```
+
+```{r Longitudinal changes in free water percentage 2}
+# LINE GRAPH:
+# all lines
+twater_mass_percentage_longitud_line1 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Total_water_percentage, 
+        color = Hormone, group = Mouse)) + 
+        geom_line(alpha = 0.5) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Total Water % Over Time \nAcross Groups",
+               x = "Time Point", y = "Total Water %")
+twater_mass_percentage_longitud_line1
+
+# with error bars
+twater_mass_percentage_longitud_line2 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Total_water_percentage, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        body_comp_colors +
+        facet_wrap("ABX") +
+        labs(title = "Total Water % Over Time \nAcross Groups",
+               x = "Time Point", y = "Total Water (%)")
+twater_mass_percentage_longitud_line2
+
+# Grouped differently
+twater_mass_percentage_longitud_line4 <- 
+  ggplot(data = EchoMRI_complete, aes(x = Day, y = Total_water_percentage, 
+        color = ABX)) + 
+        stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = ABX), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        c2 +
+        facet_wrap("Hormone") +
+        labs(title = "Total Water % Over Time \nAcross Groups",
+               x = "Time Point", y = "Total Water (%)")
+twater_mass_percentage_longitud_line4
+```
+
+***
+
+## 2.b.ii. Endpoint Body Comp in each Hormone Group vs Saline
+
+### Lean mass (g)
+```{r Endpoint differences in lean mass between hormone groups, fig.height = 5}
+# Now endpoint between groups
+EchoMRI_complete_endpoint <- EchoMRI_complete %>% 
+  filter(Timepoint == "Endpoint")
+
+# ABSOLUTE LEAN MASS BOX PLOT
+lean_mass_absolute_endpoint_box <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = Hormone, y = Lean_mass)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  body_comp_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Lean Mass \nBetween Hormone Groups", x = "Time Point", y = "Lean Mass (g)") + 
+  stat_compare_means(comparisons = list(
+      c("PGH", "Saline"),  
+      c("PL", "Saline")),
+      method = "t.test",  
+      label = "p.format")
+lean_mass_absolute_endpoint_box
+```
+
+### Lean mass (%)
+```{r Endpoint differences in lean mass percentage between hormone groups, fig.height = 5}
+lean_mass_percentage_endpoint_box <-  
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = Hormone, y = Lean_mass_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  body_comp_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Lean Mass % \nBetween Hormone Groups", x = "Time Point", y = "Lean Mass (%)") + 
+  stat_compare_means(comparisons = list(
+      c("PGH", "Saline"),  
+      c("PL", "Saline")),
+      method = "t.test",  
+      label = "p.format")
+lean_mass_percentage_endpoint_box
+```
+
+### Fat mass (g)
+```{r Endpoint differences in fat mass between hormone groups, fig.height = 5}
+fat_mass_absolute_endpoint_box <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = Hormone, y = Fat)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  body_comp_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Fat Mass \nBetween Hormone Groups", x = "Time Point", y = "Fat Mass (g)") + 
+  stat_compare_means(comparisons = list(
+      c("PGH", "Saline"),  
+      c("PL", "Saline")),
+      method = "t.test",  
+      label = "p.format")
+fat_mass_absolute_endpoint_box
+```
+
+### Fat mass (%)
+```{r Endpoint differences in fat mass percentage between hormone groups, fig.height = 5}
+fat_mass_percentage_endpoint_box <-  
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = Hormone, y = Fat_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  body_comp_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Fat Mass % \nBetween Hormone Groups", x = "Time Point", y = "Fat Mass (%)") + 
+  stat_compare_means(comparisons = list(
+      c("PGH", "Saline"),  
+      c("PL", "Saline")),
+      method = "t.test",  
+      label = "p.format")
+fat_mass_percentage_endpoint_box
+```
+
+### Total water (g)
+```{r Endpoint differences in total water between hormone groups, fig.height = 5}
+twater_mass_absolute_endpoint_box <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = Hormone, y = Total_water)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  body_comp_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Total Water \nBetween Hormone Groups", x = "Time Point", y = "Total Water (g)") + 
+  stat_compare_means(comparisons = list(
+      c("PGH", "Saline"),  
+      c("PL", "Saline")),
+      method = "t.test",  
+      label = "p.format")
+twater_mass_absolute_endpoint_box
+```
+
+### Total water (%)
+```{r Endpoint differences in total water percentage between hormone groups, fig.height = 5}
+twater_mass_percentage_endpoint_box <-  
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = Hormone, y = Total_water_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  body_comp_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Total Water % \nBetween Hormone Groups", x = "Time Point", y = "Total Water (%)") + 
+  stat_compare_means(comparisons = list(
+      c("PGH", "Saline"),  
+      c("PL", "Saline")),
+      method = "t.test",  
+      label = "p.format")
+twater_mass_percentage_endpoint_box
+```
+
+### Free water (g)
+```{r Endpoint differences in free water between hormone groups, fig.height = 5}
+fwater_mass_absolute_endpoint_box <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = Hormone, y = Free_water)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  body_comp_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Free Water \nBetween Hormone Groups", x = "Time Point", y = "Free Water (g)") + 
+  stat_compare_means(comparisons = list(
+      c("PGH", "Saline"),  
+      c("PL", "Saline")),
+      method = "t.test",  
+      label = "p.format")
+fwater_mass_absolute_endpoint_box
+```
+
+### Free water (%)
+```{r Endpoint differences in free water percentage between hormone groups, fig.height = 5}
+fwater_mass_percentage_endpoint_box <-  
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = Hormone, y = Free_water_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  body_comp_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Free Water % \nBetween Hormone Groups", x = "Time Point", y = "Free Water (%)") + 
+  stat_compare_means(comparisons = list(
+      c("PGH", "Saline"),  
+      c("PL", "Saline")),
+      method = "t.test",  
+      label = "p.format")
+fwater_mass_percentage_endpoint_box
+```
+
+***
+
+## 2.b.iii. Endpoint Body Comp in each Hormone Group ABX vs Non-ABX
+
+### Lean mass (g)
+```{r Endpoint differences in lean mass between ABX groups, fig.width = 5, fig.height = 5}
+lean_mass_absolute_endpoint_box_byabx <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = ABX, y = Lean_mass)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 +
+  facet_wrap("Hormone") +
+  labs(title = "Endpoint Lean Mass \nBetween ABX Groups", x = "Time Point", y = "Lean Mass (g)") + 
+  stat_compare_means(comparisons = list(
+      c("Non_ABX", "ABX")),
+      method = "t.test",  
+      label = "p.format")
+lean_mass_absolute_endpoint_box_byabx
+```
+
+### Lean mass (%)
+```{r Endpoint differences in lean mass percentage between ABX groups, fig.width = 5, fig.height = 5}
+lean_mass_percentage_endpoint_box_byabx <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = ABX, y = Lean_mass_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 +
+  facet_wrap("Hormone") +
+  labs(title = "Endpoint Lean Mass Percentage \nBetween ABX Groups", x = "Time Point", y = "Lean Mass (%)") + 
+  stat_compare_means(comparisons = list(
+      c("Non_ABX", "ABX")),
+      method = "t.test",  
+      label = "p.format")
+lean_mass_percentage_endpoint_box_byabx
+```
+
+### Fat mass (g)
+```{r Endpoint differences in fat mass between ABX groups, fig.width = 5, fig.height = 5}
+fat_mass_absolute_endpoint_box_byabx <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = ABX, y = Fat)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 +
+  facet_wrap("Hormone") +
+  labs(title = "Endpoint Fat Mass \nBetween ABX Groups", x = "Time Point", y = "Fat Mass (g)") + 
+  stat_compare_means(comparisons = list(
+      c("Non_ABX", "ABX")),
+      method = "t.test",  
+      label = "p.format")
+fat_mass_absolute_endpoint_box_byabx
+```
+
+### Fat mass (%)
+```{r Endpoint differences in fat mass percentage between ABX groups, fig.width = 5, fig.height = 5}
+fat_mass_percentage_endpoint_box_byabx <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = ABX, y = Fat_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 +
+  facet_wrap("Hormone") +
+  labs(title = "Endpoint Fat Mass Percentage \nBetween ABX Groups", x = "Time Point", y = "Fat Mass (%)") + 
+  stat_compare_means(comparisons = list(
+      c("Non_ABX", "ABX")),
+      method = "t.test",  
+      label = "p.format")
+fat_mass_percentage_endpoint_box_byabx
+```
+
+### Total water (g)
+```{r Endpoint differences in total water between ABX groups, fig.width = 5, fig.height = 5}
+twater_mass_absolute_endpoint_box_byabx <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = ABX, y = Total_water)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 +
+  facet_wrap("Hormone") +
+  labs(title = "Endpoint Total Water \nBetween ABX Groups", x = "Time Point", y = "Total Water (g)") + 
+  stat_compare_means(comparisons = list(
+      c("Non_ABX", "ABX")),
+      method = "t.test",  
+      label = "p.format")
+twater_mass_absolute_endpoint_box_byabx
+```
+
+### Total water (%)
+```{r Endpoint differences in total water percentage between ABX groups, fig.width = 5, fig.height = 5}
+twater_mass_percentage_endpoint_box_byabx <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = ABX, y = Total_water_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 +
+  facet_wrap("Hormone") +
+  labs(title = "Endpoint Total Water Percentage \nBetween ABX Groups", x = "Time Point", y = "Total Water (%)") + 
+  stat_compare_means(comparisons = list(
+      c("Non_ABX", "ABX")),
+      method = "t.test",  
+      label = "p.format")
+twater_mass_percentage_endpoint_box_byabx
+```
+
+### Free water (g)
+```{r Endpoint differences in free water between ABX groups, fig.width = 5, fig.height = 5}
+fwater_mass_absolute_endpoint_box_byabx <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = ABX, y = Free_water)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 +
+  facet_wrap("Hormone") +
+  labs(title = "Endpoint Free Water \nBetween ABX Groups", x = "Time Point", y = "Free Water (g)") + 
+  stat_compare_means(comparisons = list(
+      c("Non_ABX", "ABX")),
+      method = "t.test",  
+      label = "p.format")
+fwater_mass_absolute_endpoint_box_byabx
+```
+
+### Free water (%)
+```{r Endpoint differences in free water percentage between ABX groups, fig.width = 5, fig.height = 5}
+fwater_mass_percentage_endpoint_box_byabx <- 
+  ggplot(data = EchoMRI_complete_endpoint, aes(x = ABX, y = Free_water_percentage)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 +
+  facet_wrap("Hormone") +
+  labs(title = "Endpoint Free Water Percentage \nBetween ABX Groups", x = "Time Point", y = "Free Water (%)") + 
+  stat_compare_means(comparisons = list(
+      c("Non_ABX", "ABX")),
+      method = "t.test",  
+      label = "p.format")
+fwater_mass_percentage_endpoint_box_byabx
+```
+
+***
+
+## 2.b.iv. Correlations of Body Comp with other Factors
+
+### Correlations with body weight
+
+Does the relationship between these variables and total body weight differ by ABX status? 
+```{r body weight correlations 1, fig.height = 5}
+# Lean Mass (g) vs Weight
+funky1 <- EchoMRI_complete_no513 %>% 
+  ggplot(aes(x = Weight, y = Lean_mass, 
+                color = ABX, fill = ABX)) + 
+                geom_point() +
+                geom_smooth(aes(group = ABX), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + 
+                c2 + f2 +
+                labs(title = "Lean Mass Correlation with Weight",
+                       x = "Weight (g)", y = "Lean Mass (g)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left",
+                             label.y.npc = 0.9)
+funky1
+
+# Lean Mass (%) vs Weight
+funky2 <- EchoMRI_complete_no513 %>% 
+  ggplot(aes(x = Weight, y = Lean_mass_percentage, 
+                color = ABX, fill = ABX)) + 
+                geom_point() +
+                geom_smooth(aes(group = ABX), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + 
+                c2 + f2 +
+                labs(title = "Lean Mass % Correlation with Weight",
+                       x = "Weight (g)", y = "Lean Mass (%)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left",
+                             label.y.npc = 0.9)
+funky2
+
+# Fat Mass (g) vs Weight
+funky3 <- EchoMRI_complete %>%
+  ggplot(aes(x = Weight, y = Fat, 
+                color = ABX, fill = ABX)) + 
+                geom_point() +
+                geom_smooth(aes(group = ABX), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + 
+                c2 + f2 +
+                labs(title = "Fat Mass Correlation with Weight",
+                       x = "Weight (g)", y = "Fat Mass (g)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left",
+                             label.y.npc = 0.9)
+funky3
+
+# Fat Mass (%) vs Weight
+funky4 <- EchoMRI_complete %>% 
+  ggplot(aes(x = Weight, y = Fat_percentage, 
+                color = ABX, fill = ABX)) + 
+                geom_point() +
+                geom_smooth(aes(group = ABX), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + 
+                c2 + f2 +
+                labs(title = "Fat Mass % Correlation with Weight",
+                       x = "Weight (g)", y = "Fat Mass (%)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left",
+                             label.y.npc = 0.9)
+funky4
+```
+No clear differences in relationship by ABX status. 
+
+Let's plot absolute lean mass (g) vs absolute body weight (g) in each group.
+
+To see if there are differences in this relationship between hormone groups, we will have to filter to only include the endpoint values. This means we will be working with very low sample sizes for a regression, so these are probably going to be not informative graphs. But nonetheless here they are! 
+```{r Lean mass absolute corr w weight across hormone and abx groups, fig.height = 4, fig.width = 8}
+Lean_abs_corr_weight_across_hormones1 <- EchoMRI_complete %>% 
+  filter(Day == "D5") %>% 
+  ggplot(aes(x = Weight, y = Lean_mass, 
+                color = Hormone, fill = Hormone)) + 
+                geom_point() +
+                geom_smooth(aes(group = Hormone), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + 
+                body_comp_colors +
+                scale_fill_manual(values = c("plum3", "aquamarine3", "goldenrod")) +
+                facet_wrap("ABX") +
+                labs(title = "Lean Mass Correlation with Weight",
+                       x = "Weight (g)", y = "Lean Mass (g)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left",
+                             label.y.npc = 0.9)
+Lean_abs_corr_weight_across_hormones1
+
+# grouped differently
+Lean_abs_corr_weight_across_hormones2 <- EchoMRI_complete %>% 
+  filter(Day == "D5") %>% 
+  ggplot(aes(x = Weight, y = Lean_mass, color = ABX, fill = ABX)) + 
+                geom_point() +
+                geom_smooth(aes(group = ABX), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + c2 + f2 + facet_wrap("Hormone") +
+                labs(title = "Lean Mass Correlation with Weight",
+                       x = "Weight", y = "Lean Mass (g)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., 
+                                               sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left",
+                             label.y.npc = 0.9)
+Lean_abs_corr_weight_across_hormones2
+```
+
+How about lean mass percentage vs absolute body weight (g)? 
+```{r Lean mass perc corr w weight across hormone and abx groups, fig.height = 4, fig.width = 8}
+Lean_perc_corr_weight_across_hormones1 <- EchoMRI_complete %>% 
+  filter(Day == "D5") %>% 
+  ggplot(aes(x = Weight, y = Lean_mass_percentage, color = Hormone, fill = Hormone)) + 
+                geom_point() +
+                geom_smooth(aes(group = Hormone), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + body_comp_colors +
+                scale_fill_manual(values = c("plum3", "aquamarine3", "goldenrod")) +
+                facet_wrap("ABX") +
+                labs(title = "Lean Mass % Correlation with Weight",
+                       x = "Weight (g)", y = "Lean Mass (%)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left",
+                             label.y.npc = 0.9)
+Lean_perc_corr_weight_across_hormones1
+
+# Grouped differently
+Lean_perc_corr_weight_across_hormones2 <- EchoMRI_complete %>% 
+  filter(Day == "D5") %>% 
+  ggplot(aes(x = Weight, y = Lean_mass_percentage, color = ABX, fill = ABX)) + 
+                geom_point() +
+                geom_smooth(aes(group = ABX), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + c2 + f2 + facet_wrap("Hormone") +
+                labs(title = "Lean Mass % Correlation with Weight",
+                       x = "Weight", y = "Lean Mass (%)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., 
+                                               sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left",
+                             label.y.npc = 0.9)
+Lean_perc_corr_weight_across_hormones2
+```
+
+Let's plot absolute fat mass (g) vs absolute body weight (g)
+```{r Fat mass absolute corr w weight across hormone and abx groups, fig.height = 4, fig.width = 8}
+Fat_abs_corr_weight_across_hormones1 <- EchoMRI_complete %>% 
+  filter(Day == "D5") %>% 
+  ggplot(aes(x = Weight, y = Fat, 
+                color = Hormone, fill = Hormone)) + 
+                geom_point() +
+                geom_smooth(aes(group = Hormone), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() +  body_comp_colors +
+                scale_fill_manual(values = c("plum3", "aquamarine3", "goldenrod")) +
+                facet_wrap("ABX") +
+                labs(title = "Fat Mass Correlation with Weight",
+                       x = "Weight (g)", y = "Fat Mass (g)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left", 
+                             label.y.npc = 0.9)
+Fat_abs_corr_weight_across_hormones1
+
+# Grouped differently
+Fat_abs_corr_weight_across_hormones2 <- EchoMRI_complete %>% 
+  filter(Day == "D5") %>% 
+  ggplot(aes(x = Weight, y = Fat, 
+                color = ABX, fill = ABX)) + 
+                geom_point() +
+                geom_smooth(aes(group = ABX), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + c2 + f2 +
+                facet_wrap("Hormone") +
+                labs(title = "Fat Mass Correlation with Weight",
+                       x = "Weight (g)", y = "Fat Mass (g)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left", 
+                             label.y.npc = 0.9)
+Fat_abs_corr_weight_across_hormones2
+```
+
+How about free mass percentage vs absolute body weight (g)? 
+```{r Fat mass perc corr w weight across hormone and abx groups, fig.height = 4, fig.width = 8}
+Fat_perc_corr_weight_across_hormones1 <- EchoMRI_complete %>% 
+  filter(Day == "D5") %>% 
+  ggplot(aes(x = Weight, y = Fat_percentage, 
+                color = Hormone, fill = Hormone)) + 
+                geom_point() +
+                geom_smooth(aes(group = Hormone), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() +  body_comp_colors +
+                scale_fill_manual(values = c("plum3", "aquamarine3", "goldenrod")) +
+                facet_wrap("ABX") +
+                labs(title = "Fat Mass % Correlation with Weight",
+                       x = "Weight (g)", y = "Fat Mass (%)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left", 
+                             label.y.npc = 0.9)
+Fat_perc_corr_weight_across_hormones1
+
+# Grouped differently
+Fat_perc_corr_weight_across_hormones2 <- EchoMRI_complete %>% 
+  filter(Day == "D5") %>% 
+  ggplot(aes(x = Weight, y = Fat_percentage, 
+                color = ABX, fill = ABX)) + 
+                geom_point() +
+                geom_smooth(aes(group = ABX), 
+                            method = "lm", se = TRUE, linewidth = 1, alpha = 0.2) + 
+                theme_pubr() + c2 + f2 +
+                facet_wrap("Hormone") +
+                labs(title = "Fat Mass % Correlation with Weight",
+                       x = "Weight (g)", y = "Fat Mass (%)") +
+                stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+                             formula = y ~ x,
+                             parse = TRUE,
+                             label.x.npc = "left", 
+                             label.y.npc = 0.9)
+Fat_perc_corr_weight_across_hormones2
+```
+Not that interesting. 
+

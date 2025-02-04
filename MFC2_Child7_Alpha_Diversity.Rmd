@@ -1,0 +1,350 @@
+---
+title: 'Child Doc 7: Alpha Diversity'
+author: "Grace Rubin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+<!-- This is the child document containing data visualizations and statistical analyses for MFC2 Alpha Diversity Data -->
+
+```{r setup child 7, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  collapse = TRUE,
+  fig.height = 3, 
+  fig.width = 4, 
+  fig.align = 'center'
+)
+
+# loading packages
+library(ggpubr)
+library(nlme)
+library(tidyverse)
+library(here)
+library(knitr)
+library(DT)
+library(lme4)
+library(lmerTest) 
+library(phyloseq)
+library(vegan)
+library(qiime2R)
+```
+
+```{r setting theme child 7, include = FALSE}
+# making our theme
+MFC2_theme <- theme_pubr()
+MFC2_theme$strip.background = element_blank()
+MFC2_theme$strip.text = element_text(face = "bold", size = 10)
+MFC2_theme$strip.placement = "outside"
+MFC2_theme$legend.key.size = unit(0.3, "lines")
+MFC2_theme$legend.title = element_blank()
+MFC2_theme$axis.line = element_blank()
+MFC2_theme$panel.border = element_rect(fill = NA, color = "black")
+MFC2_theme$legend.margin = margin(0,0,0,0)
+theme_set(MFC2_theme)
+
+# setting colors
+hormone_group_colors <- scale_color_manual(values = c("PGH" = "plum3", "PL" = "aquamarine3", "Saline" = "goldenrod"))
+
+# A set of 20 easily distinguishable colors
+colors20 <- scale_color_manual(values = c( '#e6beff','#008080', '#fffac8', '#800000', '#aaffc3', '#9a6324','#808000', '#ffd8b1','#bcf60c', '#fabebe', '#000075', '#808080', '#ffffff', '#000000', '#e6194b', '#3cb44b',
+'#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6'))
+
+# Fill versions (sometimes ggplot using fill instead of color)
+fill_colors20 <- scale_fill_manual(values = c( '#e6beff','#008080', '#fffac8', '#800000', '#aaffc3', '#9a6324','#808000', '#ffd8b1','#bcf60c', '#fabebe', '#000075', '#808080', '#ffffff', '#000000', '#e6194b', '#3cb44b',
+'#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6'))
+
+# I like these for abx vs non abx
+c2 = scale_color_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+
+f2 = scale_fill_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+
+# setting shapes
+shapes2 <-  scale_shape_manual(values = c(19,1)) # closed circle, open circle
+shapes4 <-  scale_shape_manual(values = c(19,1,8,4)) # closed circle, open circle, star, x
+shapes5 <-  scale_shape_manual(values = c(19,1,8,4,10)) 
+```
+
+```{r reading data child 7, include = FALSE}
+# METADATA
+meta <- read_tsv("HEB114_metadata.tsv") # loading in meta data
+  # filtering to just the mouse samples
+    meta <- meta %>% 
+      filter(Study == "HEB114_Mouse")
+      # verify that mouse numbers are being read as characters
+      class(meta$Mouse_Num) # if not character, change to be character
+      # what days do we have?
+      unique(meta$Day) # 6 time points
+      # change Day to be a factor (ordered by timepoint)
+      meta$Day <- factor(meta$Day, levels = c("D-5", "D-3", "D0", "D3", "D5", "D8"))
+      class(meta$Day) # verify that it worked using class()
+      
+      # We need to give phyloseq metadata with sample IDs as rownames, NOT an individual column
+      meta <- as.data.frame(meta) # switching from tibble to DF (don't worry about this)
+      rownames(meta) <- meta$SampleID # setting row names
+      
+      # Save a backup version of meta that will remain in data frame format
+      meta_backup <- meta
+      
+# ASV TABLE
+asv_table <- read_qza("Decontam_Mouse_Study_Table_1k.qza")$data
+
+# ASV TAXONOMY
+taxonomy <-  read_qza("HEB114_taxonomy.qza")$data %>% parse_taxonomy()
+
+# ASV PHYLOGENY
+tree <- read_qza("rooted_tree.qza")$data
+```
+
+## 3.b. Overview
+
+**Motivation:** Late pregnancy is often associated with a reduction in maternal gut microbial alpha diversity, a pattern similarly observed in individuals with metabolic syndrome. This overlap has led researchers to hypothesize that gestational declines in alpha diversity may contribute to the shared metabolic alterations seen in both conditions. To investigate whether gestational changes in gut microbial alpha diversity are driven by placental hormones, we conducted a longitudinal analysis in non-pregnant mice treated with placental growth hormone (PGH) or placental lactogen (PL).
+
+For all gut microbiome analyses, I will only be focusing on the non-abx mice. The purpose of including abx mice in the MFC2 study design was to quantify the *metabolic* effects of each hormone with and without a typical gut microbiome. While this design also allows us to examine the effects of the ampicillin + enrofloxacin cocktail on gut microbiome composition, that's not the focus of this project and will not be included here. 
+
+I'll be analyzing alpha diversity through both the **Chao1** and **Shannon** indices. These indices are calculated differently and provide complementary insights into alpha diversity. **Chao1** is a richness-based index that estimates the total number of species / OTUs in a sample, accounting for rare, lower abundance taxa. **Shannon** index incorporates both richness and evenness, emphasizing more abundant taxa and de-emphasizing rare taxa. 
+
+*NOTE: At this stage, I opted not to include other indices, such as Simpson or Observed OTUs, that measure similar aspects of alpha diversity already captured by Chao1 and Shannon. I also didn't use analyses less common in gut microbiome literature, like Fisher *
+
+```{r making phyloseq object child 7, include = FALSE}
+# create phyloseq-formatted metadata table
+phylo_meta <- sample_data(meta)
+
+# create phylosec-formatted asv table (aka otu table)
+phylo_table <- otu_table(asv_table, taxa_are_rows = T)
+        # make a backup DF
+           asv_table_df <- asv_table %>% data.frame() %>% mutate(ASV = rownames(asv_table)) 
+           rownames(asv_table_df) = NULL
+
+        
+# create phyloseq formatted taxonomy
+phylo_tax <- tax_table(as.matrix(taxonomy))
+        # make a backup DF
+            taxonomy_df <- taxonomy %>% data.frame() %>% mutate(ASV = rownames(taxonomy))
+            rownames(taxonomy_df) = NULL
+            
+# create phyloseq formatted phylogeny
+phylo_tree <- phy_tree(tree)
+
+# Last, merge all 4 into one object
+phylo_all <- phyloseq(phylo_table, phylo_meta, phylo_tax, phylo_tree)
+```
+
+```{r filtering phyloseq objects child 7}
+# For this document, I am focusing on the mice with a conventional gut microbiome (i.e., non-abx mice) 
+# Filtered phylo object just for the mice with a conventional gut microbiome
+phylo_nonabx <-  subset_samples(phylo_all, Antibiotics == "Non_ABX")
+
+# Make a new phylo object that includes just the saline and PGH mice (i.e., filtering out the PL mice from phylo_nonabx)
+phylo_PGH <-  subset_samples(phylo_nonabx, Hormone != "PL")
+
+## Make a new phylo object that includes just the saline and PL mice (i.e., filtering out the PGH mice from phylo_nonabx)
+phylo_PL <-  subset_samples(phylo_nonabx, Hormone != "PGH")
+
+```
+
+## 3.b.i. Longitudinal changes in alpha diversity across each group
+
+```{r alpha diversity calculation}
+# This function returns a data frame with one row per sample and a column for each diversity metric, which we'll save as "adiv"
+adiv <- estimate_richness(phylo_all, measures = c("Chao1", "Shannon")) 
+# Change the rownames into a column (SampleID)
+adiv <- adiv %>% 
+  rownames_to_column(var = "SampleID")
+
+# join with metadata backup file
+adiv_meta <- inner_join(meta_backup, adiv, by = "SampleID")
+
+```
+
+### Chao1
+```{r longitudinal alpha diversity visualization chao1}
+# BIG QUESTION: How does alpha diversity vary over time in the different hormone groups?
+
+# Chao1 Diversity Plot
+    # Style 1:
+    Non_abx_chao1_longitud_1 <- adiv_meta %>% 
+      filter(Antibiotics == "Non_ABX") %>% 
+        ggplot(aes(x = Day, y = Chao1, color = Hormone, group = Hormone)) +
+        stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+        labs(title = "Chao1 Alpha Diversity \nLongitudinally Across Groups",
+           x = "Day", y = "Chao1 Diversity Index") + 
+        theme(legend.position = "right") 
+    Non_abx_chao1_longitud_1
+    
+    # Style 2:    
+    Non_abx_chao1_longitud_2 <- adiv_meta %>% 
+      filter(Antibiotics == "Non_ABX") %>% 
+        ggplot(aes(x = Day, y = Chao1, color = Hormone, group = Mouse_Num)) +
+        geom_line(alpha = 0.3) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        hormone_group_colors +
+        labs(title = "Chao1 Alpha Diversity \nLongitudinally Across Groups",
+           x = "Day", y = "Chao1 Diversity Index") + 
+        theme(legend.position = "right") 
+    Non_abx_chao1_longitud_2
+```
+Because we are getting signals of contamination on day 8, we can opt to make day 5 our endpoint instead. 
+
+### Shannon
+```{r longitudinal alpha diversity visualization shannon}
+# Shannon Diversity Plot
+    # Style 1:
+  Non_abx_shannon_longitud_1 <- adiv_meta %>% 
+    filter(Antibiotics == "Non_ABX") %>% 
+      ggplot(aes(x = Day, y = Shannon, color = Hormone, group = Hormone)) +
+      stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+      labs(title = "Shannon Alpha Diversity \nLongitudinally Across Groups",
+         x = "Day", y = "Shannon Diversity Index") + 
+      theme(legend.position = "right") 
+  Non_abx_shannon_longitud_1
+
+    # Style 2: 
+    Non_abx_shannon_longitud_2 <- adiv_meta %>% 
+      filter(Antibiotics == "Non_ABX") %>% 
+        ggplot(aes(x = Day, y = Shannon, color = Hormone, group = Mouse_Num)) +
+        geom_line(alpha = 0.3) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        hormone_group_colors +
+        labs(title = "Chao1 Alpha Diversity \nLongitudinally Across Groups",
+           x = "Day", y = "Chao1 Diversity Index") + 
+        theme(legend.position = "right") 
+    Non_abx_shannon_longitud_2
+```
+
+
+To me, it appears that day is the biggest driver of changes in alpha diversity, with similar patterns across time in all three groups (saline, PGH, PL) for both indices. 
+
+## 3.b.ii. Baseline vs Intervention Alpha Diversity 
+
+Excluding D8, let's look at Baseline (pre-intervention -- D-3 & D0) and Intervention (D3 & D5) to see if there are any changes to alpha diversity across the groups and whether these differences vary by group.
+
+### Chao1
+```{r Pre and post intervention alpha diversity 1, fig.height = 5, fig.width = 6}
+# Filtering the data frame
+adiv_meta_adjusted <- adiv_meta %>% 
+  filter(TimePoint != "Pre_ABX_Baseline") %>% 
+  filter(Antibiotics == "Non_ABX") %>% 
+  mutate(TimePoint = if_else(Day == "D0", "Baseline", TimePoint))
+
+# Plotting CHAO1
+# Grouping by Hormone
+chao1_by_hormone_1 <- adiv_meta_adjusted %>% 
+      ggplot(aes(x = TimePoint, y = Chao1, color = TimePoint, group = TimePoint)) +
+      geom_boxplot() + scale_color_manual(values = c("orchid1", "orchid4")) +
+      facet_wrap("Hormone") +
+      labs(title = "Changes in Chao1 Alpha Diversity",
+            x = "Time Point", y = "Chao1 Diversity Index") + 
+      stat_compare_means(comparisons = list(c("Baseline", "Intervention")),
+            method = "t.test", paired = F, label = "p.format")
+chao1_by_hormone_1
+```
+
+We can also look at just D0 to D5, rather than combining D-3 and D0 as baseline and D3 and D5 as intervention:
+```{r Pre and post intervention alpha diversity 2, fig.height = 5, fig.width = 6}
+# just d0 to d5
+# Grouping by Hormone
+chao1_by_hormone_2 <- adiv_meta_adjusted %>% 
+      filter(Day == "D0" | Day == "D5") %>% 
+      ggplot(aes(x = Day, y = Chao1, color = Day, group = Day)) +
+      geom_boxplot() + scale_color_manual(values = c("orchid1", "orchid4")) +
+      facet_wrap("Hormone") +
+      labs(title = "Changes in Chao1 Alpha Diversity",
+            x = "Day", y = "Chao1 Diversity Index") + 
+      stat_compare_means(comparisons = list(c("D0", "D5")),
+            method = "t.test", paired = F, label = "p.format")
+chao1_by_hormone_2
+```
+
+We also can do the same as above but comparing hormone groups at each time point or day, rather than looking longitudinally within the same group:
+```{r Pre and post intervention alpha diversity 3, fig.height = 5}
+# Grouping by Time Point Baseline and Intervention
+chao1_by_timepoint_1 <- adiv_meta_adjusted %>% 
+      ggplot(aes(x = Hormone, y = Chao1, color = Hormone, group = Hormone)) +
+      geom_boxplot() + hormone_group_colors +
+      facet_wrap("TimePoint") +
+      labs(title = "Differences in Chao1 Alpha Diversity \nAcross Hormone Groups",
+            x = "Hormone", y = "Chao1 Diversity Index") + 
+      stat_compare_means(comparisons = list(c("PGH", "Saline"),  c("PL", "Saline")),
+            method = "t.test", label = "p.format")
+chao1_by_timepoint_1
+
+# Grouping by Time Point D0 and D5
+chao1_by_timepoint_2 <- adiv_meta_adjusted %>% 
+      filter(Day == "D0" | Day == "D5") %>% 
+      ggplot(aes(x = Hormone, y = Chao1, color = Hormone, group = Hormone)) +
+      geom_boxplot() + hormone_group_colors +
+      facet_wrap("Day") +
+      labs(title = "Differences in Chao1 Alpha Diversity \nAcross Hormone Groups",
+            x = "Hormone", y = "Chao1 Diversity Index") + 
+      stat_compare_means(comparisons = list(c("PGH", "Saline"),  c("PL", "Saline")),
+            method = "t.test", label = "p.format")
+chao1_by_timepoint_2
+```
+
+### Shannon
+```{r Pre and post intervention alpha diversity 4, fig.height = 5, fig.width = 6}
+# Plotting SHANNON
+# Grouping by Hormone
+shannon_by_hormone_1 <- adiv_meta_adjusted %>% 
+      ggplot(aes(x = TimePoint, y = Shannon, color = TimePoint, group = TimePoint)) +
+      geom_boxplot() + scale_color_manual(values = c("turquoise1", "turquoise4")) +
+      facet_wrap("Hormone") +
+      labs(title = "Changes in Shannon Alpha Diversity",
+            x = "Time Point", y = "Shannon Diversity Index") + 
+      stat_compare_means(comparisons = list(c("Baseline", "Intervention")),
+            method = "t.test", paired = F, label = "p.format")
+shannon_by_hormone_1
+```
+
+We can also look at just D0 to D5, rather than combining D-3 and D0 as baseline and D3 and D5 as intervention:
+```{r Pre and post intervention alpha diversity 5, fig.height = 5, fig.width = 6}
+# just d0 to d5
+# Grouping by Hormone
+shannon_by_hormone_2 <- adiv_meta_adjusted %>% 
+      filter(Day == "D0" | Day == "D5") %>% 
+      ggplot(aes(x = Day, y = Shannon, color = Day, group = Day)) +
+      geom_boxplot() + scale_color_manual(values = c("turquoise1", "turquoise4")) +
+      facet_wrap("Hormone") +
+      labs(title = "Changes in Shannon Alpha Diversity",
+            x = "Day", y = "Shannon Diversity Index") + 
+      stat_compare_means(comparisons = list(c("D0", "D5")),
+            method = "t.test", paired = F, label = "p.format")
+shannon_by_hormone_2
+```
+
+We also can do the same as above but comparing hormone groups at each time point or day, rather than looking longitudinally within the same group:
+```{r Pre and post intervention alpha diversity 6, fig.height = 5}
+# Grouping by Time Point Baseline and Intervention
+shannon_by_timepoint_1 <- adiv_meta_adjusted %>% 
+      ggplot(aes(x = Hormone, y = Shannon, color = Hormone, group = Hormone)) +
+      geom_boxplot() + hormone_group_colors +
+      facet_wrap("TimePoint") +
+      labs(title = "Differences in Shannon Alpha Diversity \nAcross Hormone Groups",
+            x = "Hormone", y = "Shannon Diversity Index") + 
+      stat_compare_means(comparisons = list(c("PGH", "Saline"),  c("PL", "Saline")),
+            method = "t.test", label = "p.format")
+shannon_by_timepoint_1
+
+# Grouping by Time Point D0 and D5
+shannon_by_timepoint_2 <- adiv_meta_adjusted %>% 
+      filter(Day == "D0" | Day == "D5") %>% 
+      ggplot(aes(x = Hormone, y = Shannon, color = Hormone, group = Hormone)) +
+      geom_boxplot() + hormone_group_colors +
+      facet_wrap("Day") +
+      labs(title = "Differences in Shannon Alpha Diversity \nAcross Hormone Groups",
+            x = "Hormone", y = "Shannon Diversity Index") + 
+      stat_compare_means(comparisons = list(c("PGH", "Saline"),  c("PL", "Saline")),
+            method = "t.test", label = "p.format")
+shannon_by_timepoint_2
+```
+
+*Takeaway:* There are no consistent changes in alpha diversity driven by placental hormone exposure.

@@ -1,0 +1,1894 @@
+---
+title: 'Child Doc 8: Beta Diversity'
+author: "Grace Rubin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup child 8, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  collapse = TRUE,
+  fig.height = 5, 
+  fig.width = 4, 
+  fig.align = 'center',
+  comment = NA
+)
+
+# loading packages
+library(ggpubr)
+library(nlme)
+library(tidyverse)
+library(here)
+library(knitr)
+library(DT)
+library(lme4)
+library(lmerTest) 
+library(phyloseq)
+library(vegan)
+library(qiime2R)
+```
+
+```{r setting theme child 8, include = FALSE}
+# making our theme
+MFC2_theme <- theme_pubr()
+MFC2_theme$strip.background = element_blank()
+MFC2_theme$strip.text = element_text(face = "bold", size = 10)
+MFC2_theme$strip.placement = "outside"
+MFC2_theme$legend.key.size = unit(0.3, "lines")
+MFC2_theme$legend.title = element_blank()
+MFC2_theme$axis.line = element_blank()
+MFC2_theme$panel.border = element_rect(fill = NA, color = "black")
+MFC2_theme$legend.margin = margin(0,0,0,0)
+theme_set(MFC2_theme)
+
+# setting colors
+hormone_group_colors <- scale_color_manual(values = c("PGH" = "plum3", "PL" = "aquamarine3", "Saline" = "goldenrod"))
+
+day_colors <- scale_color_manual(values = c("D-3" = '#e6194b', "D0" = "goldenrod", "D3" = '#3cb44b', "D5" = "turquoise", "D8" = '#f032e6'))
+
+# A set of 20 easily distinguishable colors
+colors20 <- scale_color_manual(values = c( '#e6beff','#008080', '#fffac8', '#800000', '#aaffc3', '#9a6324','#808000', '#ffd8b1','#bcf60c', '#fabebe', '#000075', '#808080', '#ffffff', '#000000', '#e6194b', '#3cb44b',
+'#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6'))
+
+# Fill versions (sometimes ggplot using fill instead of color)
+fill_colors20 <- scale_fill_manual(values = c( '#e6beff','#008080', '#fffac8', '#800000', '#aaffc3', '#9a6324','#808000', '#ffd8b1','#bcf60c', '#fabebe', '#000075', '#808080', '#ffffff', '#000000', '#e6194b', '#3cb44b',
+'#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6'))
+
+# I like these for abx vs non abx
+c2 = scale_color_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+
+f2 = scale_fill_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+
+# setting shapes
+shapes2 <-  scale_shape_manual(values = c(19,1)) # closed circle, open circle
+shapes4 <-  scale_shape_manual(values = c(19,1,8,4)) # closed circle, open circle, star, x
+shapes5 <-  scale_shape_manual(values = c(19,1,8,4,10)) 
+```
+
+```{r reading data child 8, include = FALSE}
+# METADATA
+meta <- read_tsv("HEB114_metadata.tsv") # loading in meta data
+  # filtering to just the mouse samples
+    meta <- meta %>% 
+      filter(Study == "HEB114_Mouse")
+      # verify that mouse numbers are being read as characters
+      class(meta$Mouse_Num) # if not character, change to be character
+      # what days do we have?
+      unique(meta$Day) # 6 time points
+      # change Day to be a factor (ordered by timepoint)
+      meta$Day <- factor(meta$Day, levels = c("D-5", "D-3", "D0", "D3", "D5", "D8"))
+      class(meta$Day) # verify that it worked using class()
+      
+      # We need to give phyloseq metadata with sample IDs as rownames, NOT an individual column
+      meta <- as.data.frame(meta) # switching from tibble to DF (don't worry about this)
+      rownames(meta) <- meta$SampleID # setting row names
+      
+      # Save a backup version of meta that will remain in data frame format
+      meta_backup <- meta
+      
+# ASV TABLE
+asv_table <- read_qza("Decontam_Mouse_Study_Table_1k.qza")$data
+
+# ASV TAXONOMY
+taxonomy <-  read_qza("HEB114_taxonomy.qza")$data %>% parse_taxonomy()
+
+# ASV PHYLOGENY
+tree <- read_qza("rooted_tree.qza")$data
+```
+
+```{r making phyloseq object}
+# create phyloseq-formatted metadata table
+phylo_meta <- sample_data(meta)
+
+# create phylosec-formatted asv table (aka otu table)
+phylo_table <- otu_table(asv_table, taxa_are_rows = T)
+        # make a backup DF
+           asv_table_df <- asv_table %>% data.frame() %>% mutate(ASV = rownames(asv_table)) 
+           rownames(asv_table_df) = NULL
+
+        
+# create phyloseq formatted taxonomy
+phylo_tax <- tax_table(as.matrix(taxonomy))
+        # make a backup DF
+            taxonomy_df <- taxonomy %>% data.frame() %>% mutate(ASV = rownames(taxonomy))
+            rownames(taxonomy_df) = NULL
+            
+# create phyloseq formatted phylogeny
+phylo_tree <- phy_tree(tree)
+
+# Last, merge all 4 into one object
+phylo_all <- phyloseq(phylo_table, phylo_meta, phylo_tax, phylo_tree)
+
+# Filtered phylo object just for the mice with a conventional gut microbiome
+phylo_nonabx <-  subset_samples(phylo_all, Antibiotics == "Non_ABX")
+```
+## 3.c. Overview
+
+I'll be analyzing beta diversity using four commonly used distance matrices in gut microbiome studies: 
+
++ **Jaccard** -- considers only the presence or absence of taxa (focus on rare taxa)
+
++ **Bray-Curtis** -- incorporates relative abundances (focus on common taxa)
+
++ **Unweighted UniFrac** -- accounts for phylogenetic distances between taxa but focuses on presence/absence
+
++ **Weighted UniFrac** -- incorporates both phylogenetic distances and relative abundances
+
+I'll use these distance matrices to generate ordination plots using Principal Coordinates Analysis (PCoA) to visualize patterns of community variation over time and across hormone groups.
+
+## 3.c.i. Jaccard
+
+### All non-abx samples
+  
+```{r jaccard all hormones all timepoints}
+# ordinate
+ord_jaccard_all <- ordinate(phylo_nonabx, method = "PCoA", distance = "jaccard") 
+
+jaccard_loingtud_allsamples_plot <- plot_ordination(phylo_nonabx, ord_jaccard_all, color = "Hormone", shape = "Day") +
+  shapes5 + hormone_group_colors + labs(title = "Jaccard PCoA All \nHormones and Timepoints \nColored by Hormone")
+
+jaccard_loingtud_allsamples_plot
+
+```
+
+Since the D8s cluster together and we have reason to suspect contamination of those samples, now I'll filter D8 out and re-do:
+```{r jaccard all hormones no d8}
+# filter
+phylo_nod8 <-  subset_samples(phylo_nonabx, Day != "D8")
+
+# ordinate
+ord_jaccard_phylo_nod8 <- ordinate(phylo_nod8, method = "PCoA", distance = "jaccard") 
+
+# plot
+jaccard_loingtud_allhormones_nod8_plot <- plot_ordination(phylo_nod8, ord_jaccard_phylo_nod8, color = "Day", shape = "Hormone") + shapes5 + labs(title = "Jaccard PCoA All \nHormones Excluding D8 \nColored by Day") + day_colors
+
+jaccard_loingtud_allhormones_nod8_plot
+```
+
+### Longitudinal changes within each group over time
+
+Longitudinal changes in saline: 
+```{r jaccard longitud distances saline over time}
+# filter to just saline
+phylo_saline <-  subset_samples(phylo_nonabx, Hormone == "Saline")
+
+# ordinate
+ord_jaccard_saline <- ordinate(phylo_saline, method = "PCoA", distance = "jaccard") 
+
+# plot
+jaccard_longitud_saline_plot <- plot_ordination(phylo_saline, ord_jaccard_saline, color = "Day") +
+  shapes5 + labs(title = "Jaccard PCoA Saline \nLongitudinally All Days") + day_colors
+
+jaccard_longitud_saline_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r jaccard longitud distances saline over time stats}
+    # Computing the distance matrix
+    jaccard_longitud_saline_distance_matrix <- as.matrix(distance(phylo_saline, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_longitud_saline_data <- data.frame(sample_data(phylo_saline))
+    
+    # Running the PERMANOVA test
+    jaccard_longitud_saline_permanova <- adonis2(jaccard_longitud_saline_distance_matrix ~ Day, 
+                                                 data = jaccard_longitud_saline_data)
+    print(jaccard_longitud_saline_permanova) # significant effect of day in saline mice
+```
+
+Longitudinal changes in saline excluding D8: 
+```{r jaccard longitud distances saline over time no d8}
+# filter
+phylo_saline_nod8 <-  subset_samples(phylo_saline, Day != "D8")
+
+# ordinate
+ord_jaccard_saline_nod8 <- ordinate(phylo_saline_nod8, method = "PCoA", distance = "jaccard") 
+
+# plot
+jaccard_longitud_saline_plot_nod8 <- plot_ordination(phylo_saline_nod8, ord_jaccard_saline_nod8, color = "Day") +
+  shapes5 + labs(title = "Jaccard PCoA Saline \nLongitudinally Excluding D8") + day_colors
+
+jaccard_longitud_saline_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r jaccard longitud distances saline over time no d8 stats}
+ # Computing the distance matrix
+    jaccard_longitud_saline_nod8_distance_matrix <- as.matrix(distance(phylo_saline_nod8, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_longitud_saline_nod8_data <- data.frame(sample_data(phylo_saline_nod8))
+    
+    # Running the PERMANOVA test
+    jaccard_longitud_saline_nod8_permanova <- adonis2(jaccard_longitud_saline_nod8_distance_matrix ~ Day, 
+                                                 data = jaccard_longitud_saline_nod8_data)
+    print(jaccard_longitud_saline_nod8_permanova) # significant effect of day in saline mice excluding d8
+```
+
+Longitudinal changes in PGH: 
+```{r jaccard longitud distances pgh over time}
+# filter to just pgh
+phylo_pgh <-  subset_samples(phylo_nonabx, Hormone == "PGH")
+
+# ordinate
+ord_jaccard_pgh <- ordinate(phylo_pgh, method = "PCoA", distance = "jaccard") 
+
+# plot
+jaccard_longitud_pgh_plot <- plot_ordination(phylo_pgh, ord_jaccard_pgh, color = "Day") +
+  shapes5 + labs(title = "Jaccard PCoA PGH \nLongitudinally All Days") + day_colors
+
+jaccard_longitud_pgh_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r jaccard longitud distances pgh over time stats}
+    # Computing the distance matrix
+    jaccard_longitud_pgh_distance_matrix <- as.matrix(distance(phylo_pgh, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_longitud_pgh_data <- data.frame(sample_data(phylo_pgh))
+    
+    # Running the PERMANOVA test
+    jaccard_longitud_pgh_permanova <- adonis2(jaccard_longitud_pgh_distance_matrix ~ Day, 
+                                                 data = jaccard_longitud_pgh_data)
+    print(jaccard_longitud_pgh_permanova) # significant effect of day in pgh mice
+```
+
+
+Longitudinal changes in PGH excluding D8: 
+```{r jaccard longitud distances pgh over time no d8}
+# filter 
+phylo_pgh_nod8 <-  subset_samples(phylo_pgh, Day != "D8")
+
+# ordinate
+ord_jaccard_pgh_nod8 <- ordinate(phylo_pgh_nod8, method = "PCoA", distance = "jaccard") 
+
+# plot
+jaccard_longitud_pgh_plot_nod8 <- plot_ordination(phylo_pgh_nod8, ord_jaccard_pgh_nod8, color = "Day") +
+  shapes5 + labs(title = "Jaccard PCoA PGH \nLongitudinally Excluding D8") + day_colors
+
+jaccard_longitud_pgh_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r jaccard longitud distances pgh over time no d8 stats}
+ # Computing the distance matrix
+    jaccard_longitud_pgh_nod8_distance_matrix <- as.matrix(distance(phylo_pgh_nod8, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_longitud_pgh_nod8_data <- data.frame(sample_data(phylo_pgh_nod8))
+    
+    # Running the PERMANOVA test
+    jaccard_longitud_pgh_nod8_permanova <- adonis2(jaccard_longitud_pgh_nod8_distance_matrix ~ Day, 
+                                                 data = jaccard_longitud_pgh_nod8_data)
+    print(jaccard_longitud_pgh_nod8_permanova) # significant effect of day in pgh mice excluding d8
+```
+
+Longitudinal changes in PL: 
+```{r jaccard longitud distances pl over time}
+# filter to just pl
+phylo_pl <-  subset_samples(phylo_nonabx, Hormone == "PL")
+
+# ordinate
+ord_jaccard_pl <- ordinate(phylo_pl, method = "PCoA", distance = "jaccard") 
+
+# plot
+jaccard_longitud_pl_plot <- plot_ordination(phylo_pl, ord_jaccard_pl, color = "Day") +
+  shapes5 + labs(title = "Jaccard PCoA PL \nLongitudinally All Days") + day_colors
+
+jaccard_longitud_pl_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r jaccard longitud distances pl over time stats}
+    # Computing the distance matrix
+    jaccard_longitud_pl_distance_matrix <- as.matrix(distance(phylo_pl, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_longitud_pl_data <- data.frame(sample_data(phylo_pl))
+    
+    # Running the PERMANOVA test
+    jaccard_longitud_pl_permanova <- adonis2(jaccard_longitud_pl_distance_matrix ~ Day, 
+                                                 data = jaccard_longitud_pl_data)
+    print(jaccard_longitud_pl_permanova) # significant effect of day in pl mice
+```
+
+Longitudinal changes in PL excluding D8: 
+```{r jaccard longitud distances pl over time no d8}
+# filter 
+phylo_pl_nod8 <-  subset_samples(phylo_pl, Day != "D8")
+
+# ordinate
+ord_jaccard_pl_nod8 <- ordinate(phylo_pl_nod8, method = "PCoA", distance = "jaccard") 
+
+# plot! 
+# There's an easy version of this command to directly plot an ordination that works with a ggplot base
+jaccard_longitud_pl_plot_nod8 <- plot_ordination(phylo_pl_nod8, ord_jaccard_pl_nod8, color = "Day") +
+  shapes5 + labs(title = "Jaccard PCoA PL \nLongitudinally Excluding D8") + day_colors
+
+jaccard_longitud_pl_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r jaccard longitud distances pl over time no d8 stats}
+ # Computing the distance matrix
+    jaccard_longitud_pl_nod8_distance_matrix <- as.matrix(distance(phylo_pl_nod8, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_longitud_pl_nod8_data <- data.frame(sample_data(phylo_pl_nod8))
+    
+    # Running the PERMANOVA test
+    jaccard_longitud_pl_nod8_permanova <- adonis2(jaccard_longitud_pl_nod8_distance_matrix ~ Day, 
+                                                 data = jaccard_longitud_pl_nod8_data)
+    print(jaccard_longitud_pl_nod8_permanova) # NO significant effect of day in pl mice when excluding d8
+```
+
+### Endpoint clustering by hormone group
+
+D3 clustering:
+```{r jaccard all hormones d3}
+# ALL HORMONES
+# filter
+phylo_d3 <-  subset_samples(phylo_nonabx, Day == "D3")
+
+# ordinate
+ord_jaccard_phylo_d3 <- ordinate(phylo_d3, method = "PCoA", distance = "jaccard") 
+
+# plot
+jaccard_loingtud_allhormones_d3_plot <- plot_ordination(phylo_d3, ord_jaccard_phylo_d3, color = "Hormone") + shapes5 + labs(title = "Jaccard PCoA All \nHormones D3") + hormone_group_colors
+
+jaccard_loingtud_allhormones_d3_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d3_pghandsaline <-  subset_samples(phylo_d3, Hormone != "PL")
+
+# ordinate
+ord_jaccard_phylo_d3_pghandsaline <- ordinate(phylo_d3_pghandsaline, method = "PCoA", distance = "jaccard") 
+
+# plot
+plot_ordination(phylo_d3_pghandsaline, ord_jaccard_phylo_d3_pghandsaline, color = "Hormone") + shapes5 + labs(title = "Jaccard PCoA \nPGH and Saline D3") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d3_plandsaline <-  subset_samples(phylo_d3, Hormone != "PGH")
+
+# ordinate
+ord_jaccard_phylo_d3_plandsaline <- ordinate(phylo_d3_plandsaline, method = "PCoA", distance = "jaccard") 
+
+# plot
+plot_ordination(phylo_d3_plandsaline, ord_jaccard_phylo_d3_plandsaline, color = "Hormone") + shapes5 + labs(title = "Jaccard PCoA \nPL and Saline D3") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r jaccard all hormones d3 stats}
+ # Computing the distance matrix
+    jaccard_phylo_d3_distance_matrix <- as.matrix(distance(phylo_d3, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_phylo_d3_data <- data.frame(sample_data(phylo_d3))
+    
+    # Running the PERMANOVA test
+    jaccard_phylo_d3_permanova <- adonis2(jaccard_phylo_d3_distance_matrix ~ Hormone, 
+                                                 data = jaccard_phylo_d3_data)
+    print(jaccard_phylo_d3_permanova) # NO significant effect of hormone on day 3
+    
+    
+ # Just pgh and saline (since they look more visually separated)
+    jaccard_phylo_d3_pghandsaline_distance_matrix <- as.matrix(distance(phylo_d3_pghandsaline, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_phylo_d3_pghandsaline_data <- data.frame(sample_data(phylo_d3_pghandsaline))
+    
+    # Running the PERMANOVA test
+    jaccard_phylo_d3_pghandsaline_permanova <- adonis2(jaccard_phylo_d3_pghandsaline_distance_matrix ~ Hormone, 
+                                                 data = jaccard_phylo_d3_pghandsaline_data)
+    print(jaccard_phylo_d3_pghandsaline_permanova) # NO significant effect p = 0.09
+    
+```
+
+D5 clustering:
+```{r jaccard all hormones d5}
+# ALL HORMONES
+# filter
+phylo_d5 <-  subset_samples(phylo_nonabx, Day == "D5")
+
+# ordinate
+ord_jaccard_phylo_d5 <- ordinate(phylo_d5, method = "PCoA", distance = "jaccard") 
+
+# plot
+jaccard_loingtud_allhormones_d5_plot <- plot_ordination(phylo_d5, ord_jaccard_phylo_d5, color = "Hormone") + shapes5 + labs(title = "Jaccard PCoA All \nHormones D5") + hormone_group_colors
+
+jaccard_loingtud_allhormones_d5_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d5_pghandsaline <-  subset_samples(phylo_d5, Hormone != "PL")
+
+# ordinate
+ord_jaccard_phylo_d5_pghandsaline <- ordinate(phylo_d5_pghandsaline, method = "PCoA", distance = "jaccard") 
+
+# plot
+plot_ordination(phylo_d5_pghandsaline, ord_jaccard_phylo_d5_pghandsaline, color = "Hormone") + shapes5 + labs(title = "Jaccard PCoA \nPGH and Saline D5") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d5_plandsaline <-  subset_samples(phylo_d5, Hormone != "PGH")
+
+# ordinate
+ord_jaccard_phylo_d5_plandsaline <- ordinate(phylo_d5_plandsaline, method = "PCoA", distance = "jaccard") 
+
+# plot
+plot_ordination(phylo_d5_plandsaline, ord_jaccard_phylo_d5_plandsaline, color = "Hormone") + shapes5 + labs(title = "Jaccard PCoA \nPL and Saline D5") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r jaccard all hormones d5 stats}
+ # Computing the distance matrix
+    jaccard_phylo_d5_distance_matrix <- as.matrix(distance(phylo_d5, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_phylo_d5_data <- data.frame(sample_data(phylo_d5))
+    
+    # Running the PERMANOVA test
+    jaccard_phylo_d5_permanova <- adonis2(jaccard_phylo_d5_distance_matrix ~ Hormone, 
+                                                 data = jaccard_phylo_d5_data)
+    print(jaccard_phylo_d5_permanova) # NO significant effect of hormone on day 5
+```
+
+D8 clustering:
+```{r jaccard all hormones d8}
+# ALL HORMONES
+# filter
+phylo_d8 <-  subset_samples(phylo_nonabx, Day == "D8")
+
+# ordinate
+ord_jaccard_phylo_d8 <- ordinate(phylo_d8, method = "PCoA", distance = "jaccard") 
+
+# plot
+jaccard_allhormones_d8_plot <- plot_ordination(phylo_d8, ord_jaccard_phylo_d8, color = "Hormone") + shapes5 + labs(title = "Jaccard PCoA All \nHormones D8") + hormone_group_colors
+
+jaccard_allhormones_d8_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d8_pghandsaline <-  subset_samples(phylo_d8, Hormone != "PL")
+
+# ordinate
+ord_jaccard_phylo_d8_pghandsaline <- ordinate(phylo_d8_pghandsaline, method = "PCoA", distance = "jaccard") 
+
+# plot
+plot_ordination(phylo_d8_pghandsaline, ord_jaccard_phylo_d8_pghandsaline, color = "Hormone") + shapes5 + labs(title = "Jaccard PCoA \nPGH and Saline D8") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d8_plandsaline <-  subset_samples(phylo_d8, Hormone != "PGH")
+
+# ordinate
+ord_jaccard_phylo_d8_plandsaline <- ordinate(phylo_d8_plandsaline, method = "PCoA", distance = "jaccard") 
+
+# plot
+plot_ordination(phylo_d8_plandsaline, ord_jaccard_phylo_d8_plandsaline, color = "Hormone") + shapes5 + labs(title = "Jaccard PCoA \nPL and Saline D8") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r jaccard all hormones d8 stats}
+ # Computing the distance matrix
+    jaccard_phylo_d8_distance_matrix <- as.matrix(distance(phylo_d8, method = "jaccard"))
+    
+    # Preparing the data for the model
+    jaccard_phylo_d8_data <- data.frame(sample_data(phylo_d8))
+    
+    # Running the PERMANOVA test
+    jaccard_phylo_d8_permanova <- adonis2(jaccard_phylo_d8_distance_matrix ~ Hormone, 
+                                                 data = jaccard_phylo_d8_data)
+    print(jaccard_phylo_d8_permanova) # NO significant effect of hormone on day 8
+```
+
+## 3.c.ii. Bray-Curtis
+
+### All non-abx samples
+  
+```{r bc all hormones all timepoints}
+# ordinate
+ord_bc_all <- ordinate(phylo_nonabx, method = "PCoA", distance = "bray") 
+
+bc_loingtud_allsamples_plot <- plot_ordination(phylo_nonabx, ord_bc_all, color = "Hormone", shape = "Day") +
+  shapes5 + hormone_group_colors + labs(title = "Bray-Curtis PCoA All \nHormones and Timepoints \nColored by Hormone")
+
+bc_loingtud_allsamples_plot
+
+```
+
+Since the D8s cluster together and we have reason to suspect contamination of those samples, now I'll filter D8 out and re-do:
+```{r bc all hormones no d8}
+# filter
+phylo_nod8 <-  subset_samples(phylo_nonabx, Day != "D8")
+
+# ordinate
+ord_bc_phylo_nod8 <- ordinate(phylo_nod8, method = "PCoA", distance = "bray") 
+
+# plot
+bc_loingtud_allhormones_nod8_plot <- plot_ordination(phylo_nod8, ord_bc_phylo_nod8, color = "Day", shape = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA All \nHormones Excluding D8 \nColored by Day") + day_colors
+
+bc_loingtud_allhormones_nod8_plot
+```
+
+### Longitudinal changes within each group over time
+
+Longitudinal changes in saline: 
+```{r bc longitud distances saline over time}
+# filter to just saline
+phylo_saline <-  subset_samples(phylo_nonabx, Hormone == "Saline")
+
+# ordinate
+ord_bc_saline <- ordinate(phylo_saline, method = "PCoA", distance = "bray") 
+
+# plot
+bc_longitud_saline_plot <- plot_ordination(phylo_saline, ord_bc_saline, color = "Day") +
+  shapes5 + labs(title = "Bray-Curtis PCoA Saline \nLongitudinally All Days") + day_colors
+
+bc_longitud_saline_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r bc longitud distances saline over time stats}
+    # Computing the distance matrix
+    bc_longitud_saline_distance_matrix <- as.matrix(distance(phylo_saline, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_longitud_saline_data <- data.frame(sample_data(phylo_saline))
+    
+    # Running the PERMANOVA test
+    bc_longitud_saline_permanova <- adonis2(bc_longitud_saline_distance_matrix ~ Day, 
+                                                 data = bc_longitud_saline_data)
+    print(bc_longitud_saline_permanova) # significant effect of day in saline mice
+```
+
+Longitudinal changes in saline excluding D8: 
+```{r bc longitud distances saline over time no d8}
+# filter
+phylo_saline_nod8 <-  subset_samples(phylo_saline, Day != "D8")
+
+# ordinate
+ord_bc_saline_nod8 <- ordinate(phylo_saline_nod8, method = "PCoA", distance = "bray") 
+
+# plot
+bc_longitud_saline_plot_nod8 <- plot_ordination(phylo_saline_nod8, ord_bc_saline_nod8, color = "Day") +
+  shapes5 + labs(title = "Bray-Curtis PCoA Saline \nLongitudinally Excluding D8") + day_colors
+
+bc_longitud_saline_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r bc longitud distances saline over time no d8 stats}
+ # Computing the distance matrix
+    bc_longitud_saline_nod8_distance_matrix <- as.matrix(distance(phylo_saline_nod8, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_longitud_saline_nod8_data <- data.frame(sample_data(phylo_saline_nod8))
+    
+    # Running the PERMANOVA test
+    bc_longitud_saline_nod8_permanova <- adonis2(bc_longitud_saline_nod8_distance_matrix ~ Day, 
+                                                 data = bc_longitud_saline_nod8_data)
+    print(bc_longitud_saline_nod8_permanova) # significant effect of day in saline mice excluding d8
+```
+
+Longitudinal changes in PGH: 
+```{r bc longitud distances pgh over time}
+# filter to just pgh
+phylo_pgh <-  subset_samples(phylo_nonabx, Hormone == "PGH")
+
+# ordinate
+ord_bc_pgh <- ordinate(phylo_pgh, method = "PCoA", distance = "bray") 
+
+# plot
+bc_longitud_pgh_plot <- plot_ordination(phylo_pgh, ord_bc_pgh, color = "Day") +
+  shapes5 + labs(title = "Bray-Curtis PCoA PGH \nLongitudinally All Days") + day_colors
+
+bc_longitud_pgh_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r bc longitud distances pgh over time stats}
+    # Computing the distance matrix
+    bc_longitud_pgh_distance_matrix <- as.matrix(distance(phylo_pgh, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_longitud_pgh_data <- data.frame(sample_data(phylo_pgh))
+    
+    # Running the PERMANOVA test
+    bc_longitud_pgh_permanova <- adonis2(bc_longitud_pgh_distance_matrix ~ Day, 
+                                                 data = bc_longitud_pgh_data)
+    print(bc_longitud_pgh_permanova) # significant effect of day in pgh mice
+```
+
+Longitudinal changes in PGH excluding D8: 
+```{r bc longitud distances pgh over time no d8}
+# filter 
+phylo_pgh_nod8 <-  subset_samples(phylo_pgh, Day != "D8")
+
+# ordinate
+ord_bc_pgh_nod8 <- ordinate(phylo_pgh_nod8, method = "PCoA", distance = "bray") 
+
+# plot
+bc_longitud_pgh_plot_nod8 <- plot_ordination(phylo_pgh_nod8, ord_bc_pgh_nod8, color = "Day") +
+  shapes5 + labs(title = "Bray-Curtis PCoA PGH \nLongitudinally Excluding D8") + day_colors
+
+bc_longitud_pgh_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r bc longitud distances pgh over time no d8 stats}
+ # Computing the distance matrix
+    bc_longitud_pgh_nod8_distance_matrix <- as.matrix(distance(phylo_pgh_nod8, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_longitud_pgh_nod8_data <- data.frame(sample_data(phylo_pgh_nod8))
+    
+    # Running the PERMANOVA test
+    bc_longitud_pgh_nod8_permanova <- adonis2(bc_longitud_pgh_nod8_distance_matrix ~ Day, 
+                                                 data = bc_longitud_pgh_nod8_data)
+    print(bc_longitud_pgh_nod8_permanova) # significant effect of day in pgh mice excluding d8
+```
+
+Longitudinal changes in PL: 
+```{r bc longitud distances pl over time}
+# filter to just pl
+phylo_pl <-  subset_samples(phylo_nonabx, Hormone == "PL")
+
+# ordinate
+ord_bc_pl <- ordinate(phylo_pl, method = "PCoA", distance = "bray") 
+
+# plot
+bc_longitud_pl_plot <- plot_ordination(phylo_pl, ord_bc_pl, color = "Day") +
+  shapes5 + labs(title = "Bray-Curtis PCoA PL \nLongitudinally All Days") + day_colors
+
+bc_longitud_pl_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r bc longitud distances pl over time stats}
+    # Computing the distance matrix
+    bc_longitud_pl_distance_matrix <- as.matrix(distance(phylo_pl, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_longitud_pl_data <- data.frame(sample_data(phylo_pl))
+    
+    # Running the PERMANOVA test
+    bc_longitud_pl_permanova <- adonis2(bc_longitud_pl_distance_matrix ~ Day, 
+                                                 data = bc_longitud_pl_data)
+    print(bc_longitud_pl_permanova) # significant effect of day in pl mice
+```
+
+Longitudinal changes in PL excluding D8: 
+```{r bc longitud distances pl over time no d8}
+# filter 
+phylo_pl_nod8 <-  subset_samples(phylo_pl, Day != "D8")
+
+# ordinate
+ord_bc_pl_nod8 <- ordinate(phylo_pl_nod8, method = "PCoA", distance = "bray") 
+
+# plot! 
+# There's an easy version of this command to directly plot an ordination that works with a ggplot base
+bc_longitud_pl_plot_nod8 <- plot_ordination(phylo_pl_nod8, ord_bc_pl_nod8, color = "Day") +
+  shapes5 + labs(title = "Bray-Curtis PCoA PL \nLongitudinally Excluding D8") + day_colors
+
+bc_longitud_pl_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r bc longitud distances pl over time no d8 stats}
+ # Computing the distance matrix
+    bc_longitud_pl_nod8_distance_matrix <- as.matrix(distance(phylo_pl_nod8, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_longitud_pl_nod8_data <- data.frame(sample_data(phylo_pl_nod8))
+    
+    # Running the PERMANOVA test
+    bc_longitud_pl_nod8_permanova <- adonis2(bc_longitud_pl_nod8_distance_matrix ~ Day, 
+                                                 data = bc_longitud_pl_nod8_data)
+    print(bc_longitud_pl_nod8_permanova) # While not significant for jaccard, there is a significant bray-curtis effect of day in pl mice when excluding d8
+```
+
+### Endpoint clustering by hormone group
+
+D3 clustering:
+```{r bc all hormones d3}
+# ALL HORMONES
+# filter
+phylo_d3 <-  subset_samples(phylo_nonabx, Day == "D3")
+
+# ordinate
+ord_bc_phylo_d3 <- ordinate(phylo_d3, method = "PCoA", distance = "bray") 
+
+# plot
+bc_loingtud_allhormones_d3_plot <- plot_ordination(phylo_d3, ord_bc_phylo_d3, color = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA All \nHormones D3") + hormone_group_colors
+
+bc_loingtud_allhormones_d3_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d3_pghandsaline <-  subset_samples(phylo_d3, Hormone != "PL")
+
+# ordinate
+ord_bc_phylo_d3_pghandsaline <- ordinate(phylo_d3_pghandsaline, method = "PCoA", distance = "bray") 
+
+# plot
+plot_ordination(phylo_d3_pghandsaline, ord_bc_phylo_d3_pghandsaline, color = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA \nPGH and Saline D3") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d3_plandsaline <-  subset_samples(phylo_d3, Hormone != "PGH")
+
+# ordinate
+ord_bc_phylo_d3_plandsaline <- ordinate(phylo_d3_plandsaline, method = "PCoA", distance = "bray") 
+
+# plot
+plot_ordination(phylo_d3_plandsaline, ord_bc_phylo_d3_plandsaline, color = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA \nPL and Saline D3") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r bc all hormones d3 stats}
+ # Computing the distance matrix
+    bc_phylo_d3_distance_matrix <- as.matrix(distance(phylo_d3, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_phylo_d3_data <- data.frame(sample_data(phylo_d3))
+    
+    # Running the PERMANOVA test
+    bc_phylo_d3_permanova <- adonis2(bc_phylo_d3_distance_matrix ~ Hormone, 
+                                                 data = bc_phylo_d3_data)
+    print(bc_phylo_d3_permanova) # NO significant effect of hormone on day 3 for all hormones
+    
+    
+ # Just pgh and saline (since they look more visually separated)
+    bc_phylo_d3_pghandsaline_distance_matrix <- as.matrix(distance(phylo_d3_pghandsaline, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_phylo_d3_pghandsaline_data <- data.frame(sample_data(phylo_d3_pghandsaline))
+    
+    # Running the PERMANOVA test
+    bc_phylo_d3_pghandsaline_permanova <- adonis2(bc_phylo_d3_pghandsaline_distance_matrix ~ Hormone, 
+                                                 data = bc_phylo_d3_pghandsaline_data)
+    print(bc_phylo_d3_pghandsaline_permanova) # NO significant effect p = 0.085
+```
+
+D5 clustering:
+```{r bc all hormones d5}
+# ALL HORMONES
+# filter
+phylo_d5 <-  subset_samples(phylo_nonabx, Day == "D5")
+
+# ordinate
+ord_bc_phylo_d5 <- ordinate(phylo_d5, method = "PCoA", distance = "bray") 
+
+# plot
+bc_loingtud_allhormones_d5_plot <- plot_ordination(phylo_d5, ord_bc_phylo_d5, color = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA All \nHormones D5") + hormone_group_colors
+
+bc_loingtud_allhormones_d5_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d5_pghandsaline <-  subset_samples(phylo_d5, Hormone != "PL")
+
+# ordinate
+ord_bc_phylo_d5_pghandsaline <- ordinate(phylo_d5_pghandsaline, method = "PCoA", distance = "bray") 
+
+# plot
+plot_ordination(phylo_d5_pghandsaline, ord_bc_phylo_d5_pghandsaline, color = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA \nPGH and Saline D5") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d5_plandsaline <-  subset_samples(phylo_d5, Hormone != "PGH")
+
+# ordinate
+ord_bc_phylo_d5_plandsaline <- ordinate(phylo_d5_plandsaline, method = "PCoA", distance = "bray") 
+
+# plot
+plot_ordination(phylo_d5_plandsaline, ord_bc_phylo_d5_plandsaline, color = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA \nPL and Saline D5") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r bc all hormones d5 stats}
+ # Computing the distance matrix
+    bc_phylo_d5_distance_matrix <- as.matrix(distance(phylo_d5, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_phylo_d5_data <- data.frame(sample_data(phylo_d5))
+    
+    # Running the PERMANOVA test
+    bc_phylo_d5_permanova <- adonis2(bc_phylo_d5_distance_matrix ~ Hormone, 
+                                                 data = bc_phylo_d5_data)
+    print(bc_phylo_d5_permanova) # NO significant effect of hormone on day 5
+```
+
+D8 clustering:
+```{r bc all hormones d8}
+# ALL HORMONES
+# filter
+phylo_d8 <-  subset_samples(phylo_nonabx, Day == "D8")
+
+# ordinate
+ord_bc_phylo_d8 <- ordinate(phylo_d8, method = "PCoA", distance = "bray") 
+
+# plot
+bc_allhormones_d8_plot <- plot_ordination(phylo_d8, ord_bc_phylo_d8, color = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA All \nHormones D8") + hormone_group_colors
+
+bc_allhormones_d8_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d8_pghandsaline <-  subset_samples(phylo_d8, Hormone != "PL")
+
+# ordinate
+ord_bc_phylo_d8_pghandsaline <- ordinate(phylo_d8_pghandsaline, method = "PCoA", distance = "bray") 
+
+# plot
+plot_ordination(phylo_d8_pghandsaline, ord_bc_phylo_d8_pghandsaline, color = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA \nPGH and Saline D8") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d8_plandsaline <-  subset_samples(phylo_d8, Hormone != "PGH")
+
+# ordinate
+ord_bc_phylo_d8_plandsaline <- ordinate(phylo_d8_plandsaline, method = "PCoA", distance = "bray") 
+
+# plot
+plot_ordination(phylo_d8_plandsaline, ord_bc_phylo_d8_plandsaline, color = "Hormone") + shapes5 + labs(title = "Bray-Curtis PCoA \nPL and Saline D8") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r bc all hormones d8 stats}
+ # Computing the distance matrix
+    bc_phylo_d8_distance_matrix <- as.matrix(distance(phylo_d8, method = "bray"))
+    
+    # Preparing the data for the model
+    bc_phylo_d8_data <- data.frame(sample_data(phylo_d8))
+    
+    # Running the PERMANOVA test
+    bc_phylo_d8_permanova <- adonis2(bc_phylo_d8_distance_matrix ~ Hormone, 
+                                                 data = bc_phylo_d8_data)
+    print(bc_phylo_d8_permanova) # NO significant effect of hormone on day 8
+```
+
+## 3.c.iii. Unweighted Unifrac
+
+### All non-abx samples
+  
+```{r unifrac all hormones all timepoints}
+# ordinate
+ord_unifrac_all <- ordinate(phylo_nonabx, method = "PCoA", distance = "unifrac") 
+
+unifrac_loingtud_allsamples_plot <- plot_ordination(phylo_nonabx, ord_unifrac_all, color = "Hormone", shape = "Day") +
+  shapes5 + hormone_group_colors + labs(title = "UniFrac PCoA All \nHormones and Timepoints \nColored by Hormone")
+
+unifrac_loingtud_allsamples_plot
+
+```
+
+Since the D8s cluster together and we have reason to suspect contamination of those samples, now I'll filter D8 out and re-do:
+```{r unifrac all hormones no d8}
+# filter
+phylo_nod8 <-  subset_samples(phylo_nonabx, Day != "D8")
+
+# ordinate
+ord_unifrac_phylo_nod8 <- ordinate(phylo_nod8, method = "PCoA", distance = "unifrac") 
+
+# plot
+unifrac_loingtud_allhormones_nod8_plot <- plot_ordination(phylo_nod8, ord_unifrac_phylo_nod8, color = "Day", shape = "Hormone") + shapes5 + labs(title = "UniFrac PCoA All \nHormones Excluding D8 \nColored by Day") + day_colors
+
+unifrac_loingtud_allhormones_nod8_plot
+```
+
+### Longitudinal changes within each group over time
+
+Longitudinal changes in saline: 
+```{r unifrac longitud distances saline over time}
+# filter to just saline
+phylo_saline <-  subset_samples(phylo_nonabx, Hormone == "Saline")
+
+# ordinate
+ord_unifrac_saline <- ordinate(phylo_saline, method = "PCoA", distance = "unifrac") 
+
+# plot
+unifrac_longitud_saline_plot <- plot_ordination(phylo_saline, ord_unifrac_saline, color = "Day") +
+  shapes5 + labs(title = "UniFrac PCoA Saline \nLongitudinally All Days") + day_colors
+
+unifrac_longitud_saline_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r unifrac longitud distances saline over time stats}
+    # Computing the distance matrix
+    unifrac_longitud_saline_distance_matrix <- as.matrix(distance(phylo_saline, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_longitud_saline_data <- data.frame(sample_data(phylo_saline))
+    
+    # Running the PERMANOVA test
+    unifrac_longitud_saline_permanova <- adonis2(unifrac_longitud_saline_distance_matrix ~ Day, 
+                                                 data = unifrac_longitud_saline_data)
+    print(unifrac_longitud_saline_permanova) # significant effect of day in saline mice
+```
+
+Longitudinal changes in saline excluding D8: 
+```{r unifrac longitud distances saline over time no d8}
+# filter
+phylo_saline_nod8 <-  subset_samples(phylo_saline, Day != "D8")
+
+# ordinate
+ord_unifrac_saline_nod8 <- ordinate(phylo_saline_nod8, method = "PCoA", distance = "unifrac") 
+
+# plot
+unifrac_longitud_saline_plot_nod8 <- plot_ordination(phylo_saline_nod8, ord_unifrac_saline_nod8, color = "Day") +
+  shapes5 + labs(title = "UniFrac PCoA Saline \nLongitudinally Excluding D8") + day_colors
+
+unifrac_longitud_saline_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r unifrac longitud distances saline over time no d8 stats}
+ # Computing the distance matrix
+    unifrac_longitud_saline_nod8_distance_matrix <- as.matrix(distance(phylo_saline_nod8, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_longitud_saline_nod8_data <- data.frame(sample_data(phylo_saline_nod8))
+    
+    # Running the PERMANOVA test
+    unifrac_longitud_saline_nod8_permanova <- adonis2(unifrac_longitud_saline_nod8_distance_matrix ~ Day, 
+                                                 data = unifrac_longitud_saline_nod8_data)
+    print(unifrac_longitud_saline_nod8_permanova) # NO significant effect of day in saline mice excluding d8 (p = 0.059)
+```
+
+Longitudinal changes in PGH: 
+```{r unifrac longitud distances pgh over time}
+# filter to just pgh
+phylo_pgh <-  subset_samples(phylo_nonabx, Hormone == "PGH")
+
+# ordinate
+ord_unifrac_pgh <- ordinate(phylo_pgh, method = "PCoA", distance = "unifrac") 
+
+# plot
+unifrac_longitud_pgh_plot <- plot_ordination(phylo_pgh, ord_unifrac_pgh, color = "Day") +
+  shapes5 + labs(title = "UniFrac PCoA PGH \nLongitudinally All Days") + day_colors
+
+unifrac_longitud_pgh_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r unifrac longitud distances pgh over time stats}
+    # Computing the distance matrix
+    unifrac_longitud_pgh_distance_matrix <- as.matrix(distance(phylo_pgh, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_longitud_pgh_data <- data.frame(sample_data(phylo_pgh))
+    
+    # Running the PERMANOVA test
+    unifrac_longitud_pgh_permanova <- adonis2(unifrac_longitud_pgh_distance_matrix ~ Day, 
+                                                 data = unifrac_longitud_pgh_data)
+    print(unifrac_longitud_pgh_permanova) # significant effect of day in pgh mice
+```
+
+Longitudinal changes in PGH excluding D8: 
+```{r unifrac longitud distances pgh over time no d8}
+# filter 
+phylo_pgh_nod8 <-  subset_samples(phylo_pgh, Day != "D8")
+
+# ordinate
+ord_unifrac_pgh_nod8 <- ordinate(phylo_pgh_nod8, method = "PCoA", distance = "unifrac") 
+
+# plot
+unifrac_longitud_pgh_plot_nod8 <- plot_ordination(phylo_pgh_nod8, ord_unifrac_pgh_nod8, color = "Day") +
+  shapes5 + labs(title = "UniFrac PCoA PGH \nLongitudinally Excluding D8") + day_colors
+
+unifrac_longitud_pgh_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r unifrac longitud distances pgh over time no d8 stats}
+ # Computing the distance matrix
+    unifrac_longitud_pgh_nod8_distance_matrix <- as.matrix(distance(phylo_pgh_nod8, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_longitud_pgh_nod8_data <- data.frame(sample_data(phylo_pgh_nod8))
+    
+    # Running the PERMANOVA test
+    unifrac_longitud_pgh_nod8_permanova <- adonis2(unifrac_longitud_pgh_nod8_distance_matrix ~ Day, 
+                                                 data = unifrac_longitud_pgh_nod8_data)
+    print(unifrac_longitud_pgh_nod8_permanova) # NO significant effect of day in pgh mice excluding d8 (p = 0.052)
+```
+
+Longitudinal changes in PL: 
+```{r unifrac longitud distances pl over time}
+# filter to just pl
+phylo_pl <-  subset_samples(phylo_nonabx, Hormone == "PL")
+
+# ordinate
+ord_unifrac_pl <- ordinate(phylo_pl, method = "PCoA", distance = "unifrac") 
+
+# plot
+unifrac_longitud_pl_plot <- plot_ordination(phylo_pl, ord_unifrac_pl, color = "Day") +
+  shapes5 + labs(title = "UniFrac PCoA PL \nLongitudinally All Days") + day_colors
+
+unifrac_longitud_pl_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r unifrac longitud distances pl over time stats}
+    # Computing the distance matrix
+    unifrac_longitud_pl_distance_matrix <- as.matrix(distance(phylo_pl, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_longitud_pl_data <- data.frame(sample_data(phylo_pl))
+    
+    # Running the PERMANOVA test
+    unifrac_longitud_pl_permanova <- adonis2(unifrac_longitud_pl_distance_matrix ~ Day, 
+                                                 data = unifrac_longitud_pl_data)
+    print(unifrac_longitud_pl_permanova) # significant effect of day in pl mice
+```
+
+Longitudinal changes in PL excluding D8: 
+```{r unifrac longitud distances pl over time no d8}
+# filter 
+phylo_pl_nod8 <-  subset_samples(phylo_pl, Day != "D8")
+
+# ordinate
+ord_unifrac_pl_nod8 <- ordinate(phylo_pl_nod8, method = "PCoA", distance = "unifrac") 
+
+# plot! 
+# There's an easy version of this command to directly plot an ordination that works with a ggplot base
+unifrac_longitud_pl_plot_nod8 <- plot_ordination(phylo_pl_nod8, ord_unifrac_pl_nod8, color = "Day") +
+  shapes5 + labs(title = "UniFrac PCoA PL \nLongitudinally Excluding D8") + day_colors
+
+unifrac_longitud_pl_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r unifrac longitud distances pl over time no d8 stats}
+ # Computing the distance matrix
+    unifrac_longitud_pl_nod8_distance_matrix <- as.matrix(distance(phylo_pl_nod8, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_longitud_pl_nod8_data <- data.frame(sample_data(phylo_pl_nod8))
+    
+    # Running the PERMANOVA test
+    unifrac_longitud_pl_nod8_permanova <- adonis2(unifrac_longitud_pl_nod8_distance_matrix ~ Day, 
+                                                 data = unifrac_longitud_pl_nod8_data)
+    print(unifrac_longitud_pl_nod8_permanova) # NO significant effect of day in pl mice when excluding d8 ( p = 0.26)
+```
+
+### Endpoint clustering by hormone group
+
+D3 clustering:
+```{r unifrac all hormones d3}
+# ALL HORMONES
+# filter
+phylo_d3 <-  subset_samples(phylo_nonabx, Day == "D3")
+
+# ordinate
+ord_unifrac_phylo_d3 <- ordinate(phylo_d3, method = "PCoA", distance = "unifrac") 
+
+# plot
+unifrac_loingtud_allhormones_d3_plot <- plot_ordination(phylo_d3, ord_unifrac_phylo_d3, color = "Hormone") + shapes5 + labs(title = "UniFrac PCoA All \nHormones D3") + hormone_group_colors
+
+unifrac_loingtud_allhormones_d3_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d3_pghandsaline <-  subset_samples(phylo_d3, Hormone != "PL")
+
+# ordinate
+ord_unifrac_phylo_d3_pghandsaline <- ordinate(phylo_d3_pghandsaline, method = "PCoA", distance = "unifrac") 
+
+# plot
+plot_ordination(phylo_d3_pghandsaline, ord_unifrac_phylo_d3_pghandsaline, color = "Hormone") + shapes5 + labs(title = "UniFrac PCoA \nPGH and Saline D3") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d3_plandsaline <-  subset_samples(phylo_d3, Hormone != "PGH")
+
+# ordinate
+ord_unifrac_phylo_d3_plandsaline <- ordinate(phylo_d3_plandsaline, method = "PCoA", distance = "unifrac") 
+
+# plot
+plot_ordination(phylo_d3_plandsaline, ord_unifrac_phylo_d3_plandsaline, color = "Hormone") + shapes5 + labs(title = "UniFrac PCoA \nPL and Saline D3") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r unifrac all hormones d3 stats}
+ # Computing the distance matrix
+    unifrac_phylo_d3_distance_matrix <- as.matrix(distance(phylo_d3, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_phylo_d3_data <- data.frame(sample_data(phylo_d3))
+    
+    # Running the PERMANOVA test
+    unifrac_phylo_d3_permanova <- adonis2(unifrac_phylo_d3_distance_matrix ~ Hormone, 
+                                                 data = unifrac_phylo_d3_data)
+    print(unifrac_phylo_d3_permanova) # NO significant effect of hormone on day 3 for all hormones
+    
+    
+ # Just pgh and saline 
+    unifrac_phylo_d3_pghandsaline_distance_matrix <- as.matrix(distance(phylo_d3_pghandsaline, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_phylo_d3_pghandsaline_data <- data.frame(sample_data(phylo_d3_pghandsaline))
+    
+    # Running the PERMANOVA test
+    unifrac_phylo_d3_pghandsaline_permanova <- adonis2(unifrac_phylo_d3_pghandsaline_distance_matrix ~ Hormone, 
+                                                 data = unifrac_phylo_d3_pghandsaline_data)
+    print(unifrac_phylo_d3_pghandsaline_permanova) # NO significant effect p = 0.265
+```
+
+D5 clustering:
+```{r unifrac all hormones d5}
+# ALL HORMONES
+# filter
+phylo_d5 <-  subset_samples(phylo_nonabx, Day == "D5")
+
+# ordinate
+ord_unifrac_phylo_d5 <- ordinate(phylo_d5, method = "PCoA", distance = "unifrac") 
+
+# plot
+unifrac_loingtud_allhormones_d5_plot <- plot_ordination(phylo_d5, ord_unifrac_phylo_d5, color = "Hormone") + shapes5 + labs(title = "UniFrac PCoA All \nHormones D5") + hormone_group_colors
+
+unifrac_loingtud_allhormones_d5_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d5_pghandsaline <-  subset_samples(phylo_d5, Hormone != "PL")
+
+# ordinate
+ord_unifrac_phylo_d5_pghandsaline <- ordinate(phylo_d5_pghandsaline, method = "PCoA", distance = "unifrac") 
+
+# plot
+plot_ordination(phylo_d5_pghandsaline, ord_unifrac_phylo_d5_pghandsaline, color = "Hormone") + shapes5 + labs(title = "UniFrac PCoA \nPGH and Saline D5") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d5_plandsaline <-  subset_samples(phylo_d5, Hormone != "PGH")
+
+# ordinate
+ord_unifrac_phylo_d5_plandsaline <- ordinate(phylo_d5_plandsaline, method = "PCoA", distance = "unifrac") 
+
+# plot
+plot_ordination(phylo_d5_plandsaline, ord_unifrac_phylo_d5_plandsaline, color = "Hormone") + shapes5 + labs(title = "UniFrac PCoA \nPL and Saline D5") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r unifrac all hormones d5 stats}
+ # Computing the distance matrix
+    unifrac_phylo_d5_distance_matrix <- as.matrix(distance(phylo_d5, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_phylo_d5_data <- data.frame(sample_data(phylo_d5))
+    
+    # Running the PERMANOVA test
+    unifrac_phylo_d5_permanova <- adonis2(unifrac_phylo_d5_distance_matrix ~ Hormone, 
+                                                 data = unifrac_phylo_d5_data)
+    print(unifrac_phylo_d5_permanova) # NO significant effect of hormone on day 5
+```
+
+D8 clustering:
+```{r unifrac all hormones d8}
+# ALL HORMONES
+# filter
+phylo_d8 <-  subset_samples(phylo_nonabx, Day == "D8")
+
+# ordinate
+ord_unifrac_phylo_d8 <- ordinate(phylo_d8, method = "PCoA", distance = "unifrac") 
+
+# plot
+unifrac_allhormones_d8_plot <- plot_ordination(phylo_d8, ord_unifrac_phylo_d8, color = "Hormone") + shapes5 + labs(title = "UniFrac PCoA All \nHormones D8") + hormone_group_colors
+
+unifrac_allhormones_d8_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d8_pghandsaline <-  subset_samples(phylo_d8, Hormone != "PL")
+
+# ordinate
+ord_unifrac_phylo_d8_pghandsaline <- ordinate(phylo_d8_pghandsaline, method = "PCoA", distance = "unifrac") 
+
+# plot
+plot_ordination(phylo_d8_pghandsaline, ord_unifrac_phylo_d8_pghandsaline, color = "Hormone") + shapes5 + labs(title = "UniFrac PCoA \nPGH and Saline D8") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d8_plandsaline <-  subset_samples(phylo_d8, Hormone != "PGH")
+
+# ordinate
+ord_unifrac_phylo_d8_plandsaline <- ordinate(phylo_d8_plandsaline, method = "PCoA", distance = "unifrac") 
+
+# plot
+plot_ordination(phylo_d8_plandsaline, ord_unifrac_phylo_d8_plandsaline, color = "Hormone") + shapes5 + labs(title = "UniFrac PCoA \nPL and Saline D8") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r unifrac all hormones d8 stats}
+ # Computing the distance matrix
+    unifrac_phylo_d8_distance_matrix <- as.matrix(distance(phylo_d8, method = "unifrac"))
+    
+    # Preparing the data for the model
+    unifrac_phylo_d8_data <- data.frame(sample_data(phylo_d8))
+    
+    # Running the PERMANOVA test
+    unifrac_phylo_d8_permanova <- adonis2(unifrac_phylo_d8_distance_matrix ~ Hormone, 
+                                                 data = unifrac_phylo_d8_data)
+    print(unifrac_phylo_d8_permanova) # NO significant effect of hormone on day 8
+```
+
+## 3.c.iv. Weighted Unifrac
+
+### All non-abx samples
+  
+```{r wunifrac all hormones all timepoints}
+# ordinate
+ord_wunifrac_all <- ordinate(phylo_nonabx, method = "PCoA", distance = "wunifrac") 
+
+wunifrac_loingtud_allsamples_plot <- plot_ordination(phylo_nonabx, ord_wunifrac_all, color = "Hormone", shape = "Day") +
+  shapes5 + hormone_group_colors + labs(title = "Weighted UniFrac PCoA All \nHormones and Timepoints \nColored by Hormone")
+
+wunifrac_loingtud_allsamples_plot
+
+```
+
+Since the D8s cluster together and we have reason to suspect contamination of those samples, now I'll filter D8 out and re-do:
+```{r wunifrac all hormones no d8}
+# filter
+phylo_nod8 <-  subset_samples(phylo_nonabx, Day != "D8")
+
+# ordinate
+ord_wunifrac_phylo_nod8 <- ordinate(phylo_nod8, method = "PCoA", distance = "wunifrac") 
+
+# plot
+wunifrac_loingtud_allhormones_nod8_plot <- plot_ordination(phylo_nod8, ord_wunifrac_phylo_nod8, color = "Day", shape = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA All \nHormones Excluding D8 \nColored by Day") + day_colors
+
+wunifrac_loingtud_allhormones_nod8_plot
+```
+
+### Longitudinal changes within each group over time
+
+Longitudinal changes in saline: 
+```{r wunifrac longitud distances saline over time}
+# filter to just saline
+phylo_saline <-  subset_samples(phylo_nonabx, Hormone == "Saline")
+
+# ordinate
+ord_wunifrac_saline <- ordinate(phylo_saline, method = "PCoA", distance = "wunifrac") 
+
+# plot
+wunifrac_longitud_saline_plot <- plot_ordination(phylo_saline, ord_wunifrac_saline, color = "Day") +
+  shapes5 + labs(title = "Weighted UniFrac PCoA Saline \nLongitudinally All Days") + day_colors
+
+wunifrac_longitud_saline_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r wunifrac longitud distances saline over time stats}
+    # Computing the distance matrix
+    wunifrac_longitud_saline_distance_matrix <- as.matrix(distance(phylo_saline, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_longitud_saline_data <- data.frame(sample_data(phylo_saline))
+    
+    # Running the PERMANOVA test
+    wunifrac_longitud_saline_permanova <- adonis2(wunifrac_longitud_saline_distance_matrix ~ Day, 
+                                                 data = wunifrac_longitud_saline_data)
+    print(wunifrac_longitud_saline_permanova) # significant effect of day in saline mice
+```
+
+Longitudinal changes in saline excluding D8: 
+```{r wunifrac longitud distances saline over time no d8}
+# filter
+phylo_saline_nod8 <-  subset_samples(phylo_saline, Day != "D8")
+
+# ordinate
+ord_wunifrac_saline_nod8 <- ordinate(phylo_saline_nod8, method = "PCoA", distance = "wunifrac") 
+
+# plot
+wunifrac_longitud_saline_plot_nod8 <- plot_ordination(phylo_saline_nod8, ord_wunifrac_saline_nod8, color = "Day") +
+  shapes5 + labs(title = "Weighted UniFrac PCoA Saline \nLongitudinally Excluding D8") + day_colors
+
+wunifrac_longitud_saline_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r wunifrac longitud distances saline over time no d8 stats}
+ # Computing the distance matrix
+    wunifrac_longitud_saline_nod8_distance_matrix <- as.matrix(distance(phylo_saline_nod8, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_longitud_saline_nod8_data <- data.frame(sample_data(phylo_saline_nod8))
+    
+    # Running the PERMANOVA test
+    wunifrac_longitud_saline_nod8_permanova <- adonis2(wunifrac_longitud_saline_nod8_distance_matrix ~ Day, 
+                                                 data = wunifrac_longitud_saline_nod8_data)
+    print(wunifrac_longitud_saline_nod8_permanova) # Significant effect of day in saline mice excluding d8
+```
+
+Longitudinal changes in PGH: 
+```{r wunifrac longitud distances pgh over time}
+# filter to just pgh
+phylo_pgh <-  subset_samples(phylo_nonabx, Hormone == "PGH")
+
+# ordinate
+ord_wunifrac_pgh <- ordinate(phylo_pgh, method = "PCoA", distance = "wunifrac") 
+
+# plot
+wunifrac_longitud_pgh_plot <- plot_ordination(phylo_pgh, ord_wunifrac_pgh, color = "Day") +
+  shapes5 + labs(title = "Weighted UniFrac PCoA PGH \nLongitudinally All Days") + day_colors
+
+wunifrac_longitud_pgh_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r wunifrac longitud distances pgh over time stats}
+    # Computing the distance matrix
+    wunifrac_longitud_pgh_distance_matrix <- as.matrix(distance(phylo_pgh, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_longitud_pgh_data <- data.frame(sample_data(phylo_pgh))
+    
+    # Running the PERMANOVA test
+    wunifrac_longitud_pgh_permanova <- adonis2(wunifrac_longitud_pgh_distance_matrix ~ Day, 
+                                                 data = wunifrac_longitud_pgh_data)
+    print(wunifrac_longitud_pgh_permanova) # NO significant effect of day in pgh mice (p = 0.065)
+```
+
+Longitudinal changes in PGH excluding D8: 
+```{r wunifrac longitud distances pgh over time no d8}
+# filter 
+phylo_pgh_nod8 <-  subset_samples(phylo_pgh, Day != "D8")
+
+# ordinate
+ord_wunifrac_pgh_nod8 <- ordinate(phylo_pgh_nod8, method = "PCoA", distance = "wunifrac") 
+
+# plot
+wunifrac_longitud_pgh_plot_nod8 <- plot_ordination(phylo_pgh_nod8, ord_wunifrac_pgh_nod8, color = "Day") +
+  shapes5 + labs(title = "Weighted UniFrac PCoA PGH \nLongitudinally Excluding D8") + day_colors
+
+wunifrac_longitud_pgh_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r wunifrac longitud distances pgh over time no d8 stats}
+ # Computing the distance matrix
+    wunifrac_longitud_pgh_nod8_distance_matrix <- as.matrix(distance(phylo_pgh_nod8, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_longitud_pgh_nod8_data <- data.frame(sample_data(phylo_pgh_nod8))
+    
+    # Running the PERMANOVA test
+    wunifrac_longitud_pgh_nod8_permanova <- adonis2(wunifrac_longitud_pgh_nod8_distance_matrix ~ Day, 
+                                                 data = wunifrac_longitud_pgh_nod8_data)
+    print(wunifrac_longitud_pgh_nod8_permanova) # Significant effect of day in pgh mice excluding d8 (p = 0.046)
+```
+
+Longitudinal changes in PL: 
+```{r wunifrac longitud distances pl over time}
+# filter to just pl
+phylo_pl <-  subset_samples(phylo_nonabx, Hormone == "PL")
+
+# ordinate
+ord_wunifrac_pl <- ordinate(phylo_pl, method = "PCoA", distance = "wunifrac") 
+
+# plot
+wunifrac_longitud_pl_plot <- plot_ordination(phylo_pl, ord_wunifrac_pl, color = "Day") +
+  shapes5 + labs(title = "Weighted UniFrac PCoA PL \nLongitudinally All Days") + day_colors
+
+wunifrac_longitud_pl_plot
+```
+
+STATISTICAL ANALYSIS:
+```{r wunifrac longitud distances pl over time stats}
+    # Computing the distance matrix
+    wunifrac_longitud_pl_distance_matrix <- as.matrix(distance(phylo_pl, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_longitud_pl_data <- data.frame(sample_data(phylo_pl))
+    
+    # Running the PERMANOVA test
+    wunifrac_longitud_pl_permanova <- adonis2(wunifrac_longitud_pl_distance_matrix ~ Day, 
+                                                 data = wunifrac_longitud_pl_data)
+    print(wunifrac_longitud_pl_permanova) # significant effect of day in pl mice
+```
+
+Longitudinal changes in PL excluding D8: 
+```{r wunifrac longitud distances pl over time no d8}
+# filter 
+phylo_pl_nod8 <-  subset_samples(phylo_pl, Day != "D8")
+
+# ordinate
+ord_wunifrac_pl_nod8 <- ordinate(phylo_pl_nod8, method = "PCoA", distance = "wunifrac") 
+
+# plot! 
+# There's an easy version of this command to directly plot an ordination that works with a ggplot base
+wunifrac_longitud_pl_plot_nod8 <- plot_ordination(phylo_pl_nod8, ord_wunifrac_pl_nod8, color = "Day") +
+  shapes5 + labs(title = "Weighted UniFrac PCoA PL \nLongitudinally Excluding D8") + day_colors
+
+wunifrac_longitud_pl_plot_nod8
+```
+
+STATISTICAL ANALYSIS:
+```{r wunifrac longitud distances pl over time no d8 stats}
+ # Computing the distance matrix
+    wunifrac_longitud_pl_nod8_distance_matrix <- as.matrix(distance(phylo_pl_nod8, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_longitud_pl_nod8_data <- data.frame(sample_data(phylo_pl_nod8))
+    
+    # Running the PERMANOVA test
+    wunifrac_longitud_pl_nod8_permanova <- adonis2(wunifrac_longitud_pl_nod8_distance_matrix ~ Day, 
+                                                 data = wunifrac_longitud_pl_nod8_data)
+    print(wunifrac_longitud_pl_nod8_permanova) # Significant effect of day in pl mice when excluding d8 (p = 0.0.15)
+```
+
+### Endpoint clustering by hormone group
+
+D3 clustering:
+```{r wunifrac all hormones d3}
+# ALL HORMONES
+# filter
+phylo_d3 <-  subset_samples(phylo_nonabx, Day == "D3")
+
+# ordinate
+ord_wunifrac_phylo_d3 <- ordinate(phylo_d3, method = "PCoA", distance = "wunifrac") 
+
+# plot
+wunifrac_loingtud_allhormones_d3_plot <- plot_ordination(phylo_d3, ord_wunifrac_phylo_d3, color = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA All \nHormones D3") + hormone_group_colors
+
+wunifrac_loingtud_allhormones_d3_plot
+
+# PGH VS SALINE D3
+# filter
+phylo_d3_pghandsaline <-  subset_samples(phylo_d3, Hormone != "PL")
+
+# ordinate
+ord_wunifrac_phylo_d3_pghandsaline <- ordinate(phylo_d3_pghandsaline, method = "PCoA", distance = "wunifrac") 
+
+# plot
+plot_ordination(phylo_d3_pghandsaline, ord_wunifrac_phylo_d3_pghandsaline, color = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA \nPGH and Saline D3") + hormone_group_colors
+
+# PL VS SALINE D3
+# filter
+phylo_d3_plandsaline <-  subset_samples(phylo_d3, Hormone != "PGH")
+
+# ordinate
+ord_wunifrac_phylo_d3_plandsaline <- ordinate(phylo_d3_plandsaline, method = "PCoA", distance = "wunifrac") 
+
+# plot
+plot_ordination(phylo_d3_plandsaline, ord_wunifrac_phylo_d3_plandsaline, color = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA \nPL and Saline D3") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r wunifrac all hormones d3 stats}
+ # Computing the distance matrix
+    wunifrac_phylo_d3_distance_matrix <- as.matrix(distance(phylo_d3, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_phylo_d3_data <- data.frame(sample_data(phylo_d3))
+    
+    # Running the PERMANOVA test
+    wunifrac_phylo_d3_permanova <- adonis2(wunifrac_phylo_d3_distance_matrix ~ Hormone, 
+                                                 data = wunifrac_phylo_d3_data)
+    print(wunifrac_phylo_d3_permanova) # NO significant effect of hormone on day 3 for all hormones
+    
+    
+ # Just pgh and saline 
+    wunifrac_phylo_d3_pghandsaline_distance_matrix <- as.matrix(distance(phylo_d3_pghandsaline, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_phylo_d3_pghandsaline_data <- data.frame(sample_data(phylo_d3_pghandsaline))
+    
+    # Running the PERMANOVA test
+    wunifrac_phylo_d3_pghandsaline_permanova <- adonis2(wunifrac_phylo_d3_pghandsaline_distance_matrix ~ Hormone, 
+                                                 data = wunifrac_phylo_d3_pghandsaline_data)
+    print(wunifrac_phylo_d3_pghandsaline_permanova) # NO significant effect p = 0.246
+```
+
+D5 clustering:
+```{r wunifrac all hormones d5}
+# ALL HORMONES
+# filter
+phylo_d5 <-  subset_samples(phylo_nonabx, Day == "D5")
+
+# ordinate
+ord_wunifrac_phylo_d5 <- ordinate(phylo_d5, method = "PCoA", distance = "wunifrac") 
+
+# plot
+wunifrac_loingtud_allhormones_d5_plot <- plot_ordination(phylo_d5, ord_wunifrac_phylo_d5, color = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA All \nHormones D5") + hormone_group_colors
+
+wunifrac_loingtud_allhormones_d5_plot
+
+# PGH VS SALINE 
+# filter
+phylo_d5_pghandsaline <-  subset_samples(phylo_d5, Hormone != "PL")
+
+# ordinate
+ord_wunifrac_phylo_d5_pghandsaline <- ordinate(phylo_d5_pghandsaline, method = "PCoA", distance = "wunifrac") 
+
+# plot
+plot_ordination(phylo_d5_pghandsaline, ord_wunifrac_phylo_d5_pghandsaline, color = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA \nPGH and Saline D5") + hormone_group_colors
+
+# PL VS SALINE 
+# filter
+phylo_d5_plandsaline <-  subset_samples(phylo_d5, Hormone != "PGH")
+
+# ordinate
+ord_wunifrac_phylo_d5_plandsaline <- ordinate(phylo_d5_plandsaline, method = "PCoA", distance = "wunifrac") 
+
+# plot
+plot_ordination(phylo_d5_plandsaline, ord_wunifrac_phylo_d5_plandsaline, color = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA \nPL and Saline D5") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r wunifrac all hormones d5 stats}
+ # Computing the distance matrix
+    wunifrac_phylo_d5_distance_matrix <- as.matrix(distance(phylo_d5, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_phylo_d5_data <- data.frame(sample_data(phylo_d5))
+    
+    # Running the PERMANOVA test
+    wunifrac_phylo_d5_permanova <- adonis2(wunifrac_phylo_d5_distance_matrix ~ Hormone, 
+                                                 data = wunifrac_phylo_d5_data)
+    print(wunifrac_phylo_d5_permanova) # NO significant effect of hormone on day 5
+```
+
+D8 clustering:
+```{r wunifrac all hormones d8}
+# ALL HORMONES
+# filter
+phylo_d8 <-  subset_samples(phylo_nonabx, Day == "D8")
+
+# ordinate
+ord_wunifrac_phylo_d8 <- ordinate(phylo_d8, method = "PCoA", distance = "wunifrac") 
+
+# plot
+wunifrac_allhormones_d8_plot <- plot_ordination(phylo_d8, ord_wunifrac_phylo_d8, color = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA All \nHormones D8") + hormone_group_colors
+
+wunifrac_allhormones_d8_plot
+
+# PGH VS SALINE 
+# filter
+phylo_d8_pghandsaline <-  subset_samples(phylo_d8, Hormone != "PL")
+
+# ordinate
+ord_unifrac_phylo_d8_pghandsaline <- ordinate(phylo_d8_pghandsaline, method = "PCoA", distance = "wunifrac") 
+
+# plot
+plot_ordination(phylo_d8_pghandsaline, ord_unifrac_phylo_d8_pghandsaline, color = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA \nPGH and Saline D8") + hormone_group_colors
+
+# PL VS SALINE
+# filter
+phylo_d8_plandsaline <-  subset_samples(phylo_d8, Hormone != "PGH")
+
+# ordinate
+ord_wunifrac_phylo_d8_plandsaline <- ordinate(phylo_d8_plandsaline, method = "PCoA", distance = "wunifrac") 
+
+# plot
+plot_ordination(phylo_d8_plandsaline, ord_wunifrac_phylo_d8_plandsaline, color = "Hormone") + shapes5 + labs(title = "Weighted UniFrac PCoA \nPL and Saline D8") + hormone_group_colors
+```
+
+STATISTICAL ANALYSIS:
+```{r wunifrac all hormones d8 stats}
+ # Computing the distance matrix
+    wunifrac_phylo_d8_distance_matrix <- as.matrix(distance(phylo_d8, method = "wunifrac"))
+    
+    # Preparing the data for the model
+    wunifrac_phylo_d8_data <- data.frame(sample_data(phylo_d8))
+    
+    # Running the PERMANOVA test
+    wunifrac_phylo_d8_permanova <- adonis2(wunifrac_phylo_d8_distance_matrix ~ Hormone, 
+                                                 data = wunifrac_phylo_d8_data)
+    print(wunifrac_phylo_d8_permanova) # NO significant effect of hormone on day 8
+```
+
+**NOTE:** For most distance matrices, I was able to get significant clustering by hormone group when including multiple intervention days and accounting for each individual mouse as a random effect. However, this was not resulting in R^2 values any different than when mouse ID was the only dependent variable included, so I believe it was driving the significance and creating the illusion of significant group differences. I'd love to talk through those stats methods more to ensure I'm doing everything correctly.
+
+**Key Takeaways:** While there was a significant pattern of PERMANOVA separation by Day within each hormone group, indicating a longitudinal effect, there was no consistent pattern of separation by hormone group at any time point. 
+
+## 3.c.v. Plotting axes against other variables!
+
+I can extract the data on principal coordinates from the "vectors" part of an ordination object. I can then plot these vectors across other variables, like time. 
+
+### Bray-Curtis Vectors vs Time
+
+I'll start with plotting these in terms of Bray-Curtis ordination:
+```{r principal coordinates vs day bray curtis 1}
+# extracting vectors
+ord_bc_all_pc <-  ord_bc_all$vectors
+
+# join this with the metadata file
+ord_bc_all_pc <- ord_bc_all_pc %>% data.frame() %>% select(Axis.1, Axis.2, Axis.3, Axis.4) %>%
+  mutate(SampleID = rownames(ord_bc_all_pc)) %>%
+  left_join(meta_backup, by = "SampleID")
+
+# PC1 vs Time
+ord_bc_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.1, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Bray-Curtis PC1 \nAcross Days")
+
+# PC2 vs Time
+ord_bc_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.2, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Bray-Curtis PC2 \nAcross Days")
+
+# PC2 vs Time (just PGH and Saline)
+ord_bc_all_pc %>% 
+  filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Day, y = Axis.2, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Bray-Curtis PC2 \nAcross Days")
+# significant separation by day 3, but then it goes away
+     # and directionally the same of going up on axis 2
+
+# That D3 separation can also be plotted like this:
+ord_bc_all_pc %>% 
+  filter(Day == "D3") %>% filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Hormone, y = Axis.2, color = Hormone)) +
+  geom_boxplot() + hormone_group_colors +
+  labs(title = "Bray-Curtis Day 3 PC2 \nSaline vs PGH") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+
+# And it can be compared to baseline lack of separation like this:
+ord_bc_all_pc %>% 
+    filter(Day == "D3" | Day == "D-3") %>% 
+    ggplot(aes(x = Hormone, y = Axis.2, color = Hormone)) +
+    geom_boxplot() + facet_wrap(~Day) + hormone_group_colors +
+  labs(title = "Bray-Curtis Day -3 to Day 3 PC2 \nSaline vs PGH") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+
+# PC3 vs Time
+ord_bc_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.3, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Bray-Curtis PC3 \nAcross Days")
+
+# PC3 vs Time (just PGH and Saline)
+ord_bc_all_pc %>% 
+  filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Day, y = Axis.3, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Bray-Curtis PC3 \nAcross Days")
+
+# That D5 and D8 separation can also be plotted like this:
+ord_bc_all_pc %>% 
+  filter(Day == "D5" | Day == "D8") %>% filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Hormone, y = Axis.3, color = Hormone)) +
+  geom_boxplot() + hormone_group_colors + facet_wrap("Day") +
+  labs(title = "Bray-Curtis PC3 \nSaline vs PGH Days 5 and 8") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+
+# And it can be compared to baseline lack of separation like this:
+ord_bc_all_pc %>% 
+    filter(Day == "D5" | Day == "D-3") %>% filter(Hormone != "PL") %>% 
+    ggplot(aes(x = Hormone, y = Axis.3, color = Hormone)) +
+    geom_boxplot() + facet_wrap(~Day) + hormone_group_colors +
+  labs(title = "Bray-Curtis Day -3 to Day 5 PC3 \nSaline vs PGH") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+```
+
+Time can also be plotted against axes derived from our other distance matrices.
+
+### Jaccard Vectors vs Time
+```{r principal coordinates vs day jaccard 1}
+# extracting vectors
+ord_jaccard_all_pc <-  ord_jaccard_all$vectors
+
+# join this with the metadata file
+ord_jaccard_all_pc <- ord_jaccard_all_pc %>% data.frame() %>% select(Axis.1, Axis.2, Axis.3, Axis.4) %>%
+  mutate(SampleID = rownames(ord_jaccard_all_pc)) %>%
+  left_join(meta_backup, by = "SampleID")
+
+# PC1 vs Time
+ord_jaccard_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.1, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Jaccard PC1 \nAcross Days")
+
+# PC2 vs Time
+ord_jaccard_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.2, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Jaccard PC2 \nAcross Days")
+
+# PC2 vs Time (just PGH and Saline)
+ord_jaccard_all_pc %>% 
+  filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Day, y = Axis.2, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Jaccard PC2 \nAcross Days")
+
+# That D3 separation can also be plotted like this:
+ord_jaccard_all_pc %>% 
+  filter(Day == "D3") %>% filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Hormone, y = Axis.2, color = Hormone)) +
+  geom_boxplot() + hormone_group_colors +
+  labs(title = "Jaccard Day 3 PC2 \nSaline vs PGH") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+
+# And it can be compared to baseline lack of separation like this:
+ord_jaccard_all_pc %>% 
+    filter(Day == "D3" | Day == "D-3") %>% 
+    ggplot(aes(x = Hormone, y = Axis.2, color = Hormone)) +
+    geom_boxplot() + facet_wrap(~Day) + hormone_group_colors +
+  labs(title = "Jaccard Day -3 to Day 3 PC2 \nSaline vs PGH") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+
+# PC3 vs Time
+ord_jaccard_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.3, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Jaccard PC3 \nAcross Days")
+
+# PC3 vs Time (just PGH and Saline)
+ord_jaccard_all_pc %>% 
+  filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Day, y = Axis.3, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Jaccard PC3 \nAcross Days")
+
+# That D5 and D8 separation can also be plotted like this:
+ord_jaccard_all_pc %>% 
+  filter(Day == "D5" | Day == "D8") %>% filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Hormone, y = Axis.3, color = Hormone)) +
+  geom_boxplot() + hormone_group_colors + facet_wrap("Day") +
+  labs(title = "Jaccard PC3 \nSaline vs PGH Days 5 and 8") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+
+# And it can be compared to baseline lack of separation like this:
+ord_jaccard_all_pc %>% 
+    filter(Day == "D5" | Day == "D-3") %>% filter(Hormone != "PL") %>% 
+    ggplot(aes(x = Hormone, y = Axis.3, color = Hormone)) +
+    geom_boxplot() + facet_wrap(~Day) + hormone_group_colors +
+  labs(title = "Jaccard Day -3 to Day 5 PC3 \nSaline vs PGH") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+```
+
+### Unweighted UniFrac Vectors vs Time
+```{r principal coordinates vs day unifrac 1}
+# extracting vectors
+ord_unifrac_all_pc <- ord_unifrac_all$vectors
+
+# join this with the metadata file
+ord_unifrac_all_pc <- ord_unifrac_all_pc %>% data.frame() %>% select(Axis.1, Axis.2, Axis.3, Axis.4) %>%
+  mutate(SampleID = rownames(ord_unifrac_all_pc)) %>%
+  left_join(meta_backup, by = "SampleID")
+
+# PC1 vs Time
+ord_unifrac_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.1, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "UniFrac PC1 \nAcross Days")
+
+# PC1 vs Time (just PGH and Saline, no D8)
+ord_unifrac_all_pc %>% 
+  filter(Day != "D8") %>% filter(Hormone != "PGH") %>% 
+  ggplot(aes(x = Day, y = Axis.1, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "UniFrac PC1 \nAcross Days")
+
+# That D3 separation can also be plotted like this:
+ord_unifrac_all_pc %>% 
+  filter(Day == "D3" | Day == "D-3") %>% filter(Hormone != "PGH") %>% 
+  ggplot(aes(x = Hormone, y = Axis.1, color = Hormone)) +
+  geom_boxplot() + hormone_group_colors + facet_wrap("Day") +
+  labs(title = "UniFrac Day -3 and Day 3 PC1 \nSaline vs PL") + 
+  stat_compare_means(comparisons = list(c("Saline", "PL")),
+            method = "t.test", paired = F, label = "p.format")
+
+# PC2 vs Time
+ord_unifrac_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.2, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "UniFrac PC2 \nAcross Days")
+
+# PC2 vs Time (just PGH and Saline)
+ord_unifrac_all_pc %>% 
+  filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Day, y = Axis.2, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "UniFrac PC2 \nAcross Days")
+
+# That D8 separation can also be plotted like this:
+ord_unifrac_all_pc %>% 
+  filter(Day == "D8") %>% filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Hormone, y = Axis.2, color = Hormone)) +
+  geom_boxplot() + hormone_group_colors +
+  labs(title = "UniFrac Day 8 PC2 \nSaline vs PGH") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+
+# PC3 vs Time
+ord_unifrac_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.3, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "UniFrac PC3 \nAcross Days")
+
+```
+
+### Weighted Unifrac Vectors vs Time
+```{r principal coordinates vs day wunifrac 1}
+# extracting vectors
+ord_wunifrac_all_pc <- ord_wunifrac_all$vectors
+
+# join this with the metadata file
+ord_wunifrac_all_pc <- ord_wunifrac_all_pc %>% data.frame() %>% select(Axis.1, Axis.2, Axis.3, Axis.4) %>%
+  mutate(SampleID = rownames(ord_wunifrac_all_pc)) %>%
+  left_join(meta_backup, by = "SampleID")
+
+# PC1 vs Time
+ord_wunifrac_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.1, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Weighted UniFrac PC1 \nAcross Days")
+
+# PC2 vs Time
+ord_wunifrac_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.2, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Weighted UniFrac PC2 \nAcross Days")
+
+# PC2 vs Time (just PGH and Saline)
+ord_wunifrac_all_pc %>% 
+  filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Day, y = Axis.2, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Weighted UniFrac PC2 \nAcross Days")
+
+# That D5 and D8 separation can also be plotted like this:
+ord_wunifrac_all_pc %>% 
+  filter(Hormone != "PL") %>% 
+  ggplot(aes(x = Hormone, y = Axis.2, color = Hormone, group = Hormone)) +
+  geom_boxplot() + hormone_group_colors + facet_wrap("Day") +
+  labs(title = "Weighted UniFrac PC2 \nSaline vs PGH") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+
+# PC3 vs Time
+ord_wunifrac_all_pc %>% 
+  ggplot(aes(x = Day, y = Axis.3, color = Hormone, group = Hormone)) +
+  stat_summary(geom = "pointrange") + stat_summary(geom = "line") + hormone_group_colors +
+  labs(title = "Weighted UniFrac PC3 \nAcross Days")
+```
+

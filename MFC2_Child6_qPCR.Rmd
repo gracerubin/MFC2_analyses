@@ -1,0 +1,306 @@
+---
+title: 'Child Doc 6: qPCR Data'
+author: "Grace Rubin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+<!-- This is the child document containing data visualizations and statistical analyses for MFC2 qPCR (bacterial density) data -->
+
+```{r setup child doc 6, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  collapse = TRUE,
+  fig.height = 3, 
+  fig.width = 4, 
+  fig.align = 'center'
+)
+
+# loading packages
+library(ggpubr)
+library(nlme)
+library(tidyverse)
+library(here)
+library(knitr)
+library(DT)
+library(lme4)
+library(lmerTest) 
+
+# Making some colors
+hormone_group_colors <- scale_color_manual(values = c("PGH" = "plum3", "PL" = "aquamarine3", "Saline" = "goldenrod"))
+
+# I like these for abx vs non abx
+c2 = scale_color_manual(values = c(
+  "ABX" = "midnightblue", 
+  "Non_ABX" = "brown4"))
+
+
+f2 = scale_fill_manual(values = c(
+  "ABX" = "midnightblue", 
+  "Non_ABX" = "brown4"))
+```
+
+## 3.a. Overview
+
+The main purpose of qPCR in MFC2 was to:
+
+a. broadly verify that our antibiotic cocktail successfully suppressed gut microbial density
+
+b. quantify the extent of that suppression. By what order of magnitude did ABX and non-ABX groups differ in bacterial density?
+
+Our qPCR DF includes measurements of genomes per gram of feces. These values can differ by several orders of magnitude between the ABX and non-ABX mice, making it difficult to visualize them on the same plot. To help us better compare their differences, let's add a new column with the log-transformed values. 
+
+```{r Reading data child doc 6, include = FALSE}
+# Load in qPCR data
+qPCR <- read.csv("HEB114_qPCR_Simplified.csv")
+
+# Load in metadata
+Metadata <- read.csv("HEB114_Metadata.csv")
+
+# Rename the Mouse_Num column in the qPCR DF to Mouse.
+qPCR <- qPCR %>% 
+  rename(Mouse = Mouse_Num)
+
+# Rename Genomes.g.feces to have underscores
+qPCR <- qPCR %>% 
+  rename(Genomes_g_feces = Genomes.g.feces)
+
+# Switch mouse number from numeric to character
+qPCR$Mouse <- as.character(qPCR$Mouse)
+Metadata$Mouse <- as.character(Metadata$Mouse)
+
+# adding log values
+qPCR <- qPCR %>% 
+  mutate(log_genomes_per_gram = log(Genomes_g_feces))
+
+# Joining with metadata 
+qPCR <- left_join(qPCR, Metadata, by = "Mouse")
+
+# Create a new qPCR data frame called qPCR_filtered that excludes the D-5 samples (the pre-antibiotic baselines) 
+  # this is useful for if I want to do an all-abx-day inclusive group comparison
+qPCR_filtered <- qPCR %>% 
+  filter(Day != "D-5")
+```
+
+## 3.a.i. Longitudinal changes in bacterial density in ABX and Non-ABX groups over time
+```{r Longtiudinal changes}
+# ABSOLUTE BACTERIAL DENSITY
+# Need to factor order the days
+qPCR$Day <- factor(qPCR$Day, levels = c("D-5", "D-3", "D0", "D3", "D5", "D8")) 
+
+# Style 1: 
+qpcr_longitud_by_abx1 <- 
+  ggplot(qPCR, aes(x = Day, y = Genomes_g_feces, color = ABX, group = Mouse)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+  c2 +
+  labs(title = "Bacterial Density Across \nTimepoints by ABX Group",
+               x = "Day", y = "Genomes per gram of feces")
+qpcr_longitud_by_abx1
+
+# Style 2: 
+qpcr_longitud_by_abx2 <- 
+  ggplot(qPCR, aes(x = Day, y = Genomes_g_feces, color = ABX)) +
+  stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+  stat_summary(aes(group = ABX), fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 0.5) +
+  c2 + 
+  labs(title = "Bacterial Density Across \nTimepoints by ABX Group",
+               x = "Day", y = "Genomes per gram of feces")
+qpcr_longitud_by_abx2
+
+# LOG BACTERIAL DENSITY
+# Style 1: 
+qpcr_longitud_by_abx1_log <- 
+  ggplot(qPCR, aes(x = Day, y = log_genomes_per_gram, color = ABX, group = Mouse)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+  c2 +
+  labs(title = "Bacterial Density Across \nTimepoints by ABX Group",
+               x = "Day", y = "Log genomes per gram of feces")
+qpcr_longitud_by_abx1_log
+
+# Style 2: 
+qpcr_longitud_by_abx2_log <- 
+  ggplot(qPCR, aes(x = Day, y = log_genomes_per_gram, color = ABX)) +
+  stat_summary(aes(group = ABX), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = ABX), fun = mean, geom = "point", size = 2) +
+  stat_summary(aes(group = ABX), fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 0.5) +
+  c2 + 
+  labs(title = "Bacterial Density Across \nTimepoints by ABX Group",
+               x = "Day", y = "Log genomes per gram of feces")
+qpcr_longitud_by_abx2_log
+```
+Seems like approximately a 50,000 fold decrease in bacterial density from D-5 to D5.
+
+## 3.a.ii. Endpoint differences in bacterial density between ABX and Non-ABX
+
+First I'm going to include all ABX days (D-3 to D8):
+```{r ABX vs Non-ABX qPCR D-3 onward, fig.height = 4}
+# Visualization 1: All ABX Days & Actual Genomic Density
+qPCR_allabxdays <- 
+  ggplot(data = qPCR_filtered, aes(x = ABX, y = Genomes_g_feces)) +
+  geom_boxplot() + 
+  geom_jitter(aes(color = Day), width = 0.2, height = 0) + # points
+  labs(title = "Bacterial Load Between Groups",
+       x = "ABX Status", y = "Genomes per gram of feces") + 
+  stat_compare_means(comparisons = list(c("ABX", "Non_ABX")), method = "t.test",  label = "p.format")
+
+qPCR_allabxdays
+
+# Visualization 2: All ABX Days & Log Genomic Density
+qPCR_allabxdays_log <- 
+  ggplot(data = qPCR_filtered, aes(x = ABX, y = log_genomes_per_gram)) +
+  geom_boxplot() + 
+  geom_jitter(aes(color = Day), width = 0.2, height = 0) + # points
+  labs(title = "Bacterial Load Between Groups",
+       x = "ABX Status", y = "Log genomes per gram of feces") + 
+  stat_compare_means(comparisons = list(c("ABX", "Non_ABX")), method = "t.test",  label = "p.format")
+
+qPCR_allabxdays_log
+```
+
+Next, to look at endpoint, we can include just days 5 and day 8, when we expect bacterial density to be maximally suppressed in the ABX mice:
+```{r ABX vs Non-ABX qPCR D5 and D8, fig.height = 4}
+# Visualization 1: Endpoint ABX Days & Actual Genomic Density
+qPCR_Endpoint1 <- qPCR_filtered %>% 
+  filter(Day == "D5" | Day == "D8")
+
+qPCR_endpoint1_between_abx <- 
+  ggplot(data = qPCR_Endpoint1, aes(x = ABX, y = Genomes_g_feces)) +
+  geom_boxplot() + 
+  geom_jitter(aes(color = Day), width = 0.2, height = 0) + # points
+  labs(title = "Bacterial Load Between Groups",
+       x = "ABX Status", y = "Genomes per gram of feces") + 
+  stat_compare_means(comparisons = list(c("ABX", "Non_ABX")), method = "t.test",  label = "p.format")
+
+qPCR_endpoint1_between_abx
+
+# Visualization 2: Endpoint ABX Days & Log Genomic Density
+qPCR_endpoint1_between_abx_log <- 
+  ggplot(data = qPCR_Endpoint1, aes(x = ABX, y = log_genomes_per_gram)) +
+  geom_boxplot() + 
+  geom_jitter(aes(color = Day), width = 0.2, height = 0) + # points
+  labs(title = "Bacterial Load Between Groups",
+       x = "ABX Status", y = "Log genomes per gram of feces") + 
+  stat_compare_means(comparisons = list(c("ABX", "Non_ABX")), method = "t.test",  label = "p.format")
+
+qPCR_endpoint1_between_abx_log
+```
+
+## 3.a.iii. Assessing any hormone-based differences in bacterial density
+
+### Longitudinal group differences?
+```{r Longitudinal hormone group differences in bacterial density}
+# ABSOLUTE BACTERIAL DENSITY
+# Need to factor order the days
+qPCR$Day <- factor(qPCR$Day, levels = c("D-5", "D-3", "D0", "D3", "D5", "D8")) 
+
+# Style 1: 
+qpcr_longitud_by_hormone1 <- 
+  ggplot(qPCR, aes(x = Day, y = Genomes_g_feces, color = Hormone, group = Mouse)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+  hormone_group_colors +
+  facet_wrap("ABX") +
+  labs(title = "Bacterial Density Across \nTimepoints by Hormone Group",
+               x = "Day", y = "Genomes per gram of feces")
+qpcr_longitud_by_hormone1
+
+# Style 2: 
+qpcr_longitud_by_hormone2 <- 
+  ggplot(qPCR, aes(x = Day, y = Genomes_g_feces, color = Hormone)) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+  stat_summary(aes(group = Hormone), fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 0.5) +
+  hormone_group_colors +
+  facet_wrap("ABX") +
+  labs(title = "Bacterial Density Across \nTimepoints by Hormone Group",
+               x = "Day", y = "Genomes per gram of feces")
+qpcr_longitud_by_hormone2
+
+# LOG BACTERIAL DENSITY
+# Style 1: 
+qpcr_longitud_by_hormone1_log <- 
+  ggplot(qPCR, aes(x = Day, y = log_genomes_per_gram, color = Hormone, group = Mouse)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+  hormone_group_colors +
+  facet_wrap("ABX") +
+  labs(title = "Bacterial Density Across \nTimepoints by Hormone Group",
+               x = "Day", y = "Log genomes per gram of feces")
+qpcr_longitud_by_hormone1_log
+
+# Style 2: 
+qpcr_longitud_by_hormone2_log <- 
+  ggplot(qPCR, aes(x = Day, y = log_genomes_per_gram, color = Hormone)) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+  stat_summary(aes(group = Hormone), fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 0.5) +
+  hormone_group_colors +
+  facet_wrap("ABX") +
+  labs(title = "Bacterial Density Across \nTimepoints by Hormone Group",
+               x = "Day", y = "Log genomes per gram of feces")
+qpcr_longitud_by_hormone2_log
+```
+
+### Endpoint group differences?
+```{r Hormone comparisons qPCR D5 and D8, fig.height=4}
+# Visualization 1: Endpoint ABX Days & Actual Genomic Density
+
+qPCR_endpoint1_between_hormones <- 
+  ggplot(data = qPCR_Endpoint1, aes(x = Hormone, y = Genomes_g_feces)) +
+  geom_boxplot() + 
+  facet_wrap("ABX") + 
+  geom_jitter(aes(color = Day), width = 0.2, height = 0) +
+  labs(title = "Bacterial Load Between Groups",
+       x = "Hormone Group & ABX Status", y = "Genomes per gram of feces") + 
+  stat_compare_means(comparisons = list(c("PGH", "Saline"), c("PL", "Saline"), c("PL", "PGH")), method = "t.test",  label = "p.format")
+
+qPCR_endpoint1_between_hormones
+
+# Visualization 2: Endpoint ABX Days & Log Genomic Density
+qPCR_endpoint1_between_hormones_log <- 
+  ggplot(data = qPCR_Endpoint1, aes(x = Hormone, y = log_genomes_per_gram)) +
+  geom_boxplot() + 
+  facet_wrap("ABX") + 
+  geom_jitter(aes(color = Day), width = 0.2, height = 0) +
+  labs(title = "Bacterial Load Between Groups",
+       x = "Hormone Group & ABX Status", y = "Log genomes per gram of feces") + 
+  stat_compare_means(comparisons = list(c("PGH", "Saline"), c("PL", "Saline"), c("PL", "PGH")), method = "t.test",  label = "p.format")
+
+qPCR_endpoint1_between_hormones_log
+
+# Visualization 3: All ABX and Hormone Days & Genomic Density (Days 3, 5, 8)
+qPCR_allabxdays_between_hormones <- qPCR_filtered %>% 
+  filter(Day == "D3" | Day == "D5" | Day == "D8") %>% 
+  ggplot(aes(x = Hormone, y = Genomes_g_feces)) +
+  geom_boxplot() + 
+  facet_wrap("ABX") + 
+  geom_jitter(aes(color = Day), width = 0.2, height = 0) +
+  labs(title = "Bacterial Load Between Groups",
+       x = "Hormone Group & ABX Status", y = "Genomes per gram of feces") + 
+  stat_compare_means(comparisons = list(c("PGH", "Saline"), c("PL", "Saline"), c("PL", "PGH")), method = "t.test",  label = "p.format")
+
+qPCR_allabxdays_between_hormones
+
+# Visualization 4: All ABX Days & Log Genomic Density
+qPCR_allabxdays_between_hormones_log <- qPCR_filtered %>% 
+  filter(Day == "D3" | Day == "D5" | Day == "D8") %>% 
+  ggplot(aes(x = Hormone, y = log_genomes_per_gram)) +
+  geom_boxplot() + 
+  facet_wrap("ABX") + 
+  geom_jitter(aes(color = Day), width = 0.2, height = 0) +
+  labs(title = "Bacterial Load Between Groups",
+       x = "Hormone Group & ABX Status", y = "Log genomes per gram of feces") + 
+  stat_compare_means(comparisons = list(c("PGH", "Saline"), c("PL", "Saline"), c("PL", "PGH")), method = "t.test",  label = "p.format")
+
+qPCR_allabxdays_between_hormones_log
+```
+There is lower bacterial density in the PL Non-ABX mice than in the Saline Non-ABX mice when all antibiotic hormone days are included (D3, D5, and D8). However, this difference doesn't reach significance when only days 5 and 8 are included. Additionally, as we can see from the longitudinal analyses, it appears that prior to any hormone exposure, the mice in the PL group had naturally lower fecal bacterial loads.  

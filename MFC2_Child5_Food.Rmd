@@ -1,0 +1,508 @@
+---
+title: 'Child Doc 5: Food Consumption'
+author: "Grace Rubin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup child doc 5, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  collapse = TRUE,
+  fig.height = 3, 
+  fig.width = 4, 
+  fig.align = 'center'
+)
+
+# loading packages
+library(ggpubr)
+library(nlme)
+library(tidyverse)
+library(here)
+library(knitr)
+library(DT)
+library(lme4)
+library(lmerTest) 
+library(ggpmisc)
+library(RColorBrewer)
+```
+
+<!-- This is the child document containing data visualizations and statistical analyses for MFC2 Food Consumption Data -->
+
+```{r Reading data child doc 5, include=FALSE}
+# So each child document functions properly independently, I will reload redundant data frames in each.
+# Loading in metadata
+Metadata <- read.csv("HEB114_Metadata.csv") # see the DF appear in your global environment pane
+
+# Loading in echo MRI data
+EchoMRI <- read.csv("HEB114_Body_Composition.csv")
+
+# Loading in weight data
+Weight <- read.csv("HEB114_Daily_Weight_Simplified.csv")
+      # A little data cleaning:
+      Weight$Day <- trimws(Weight$Day) # this trims off any hanging spaces at the ends of our days
+      Weight$Day <- factor(Weight$Day, levels = c("D-4", "D-3", "D-2", "D-1", 
+                                                  "D0", "D2", "D3", "D4", "D5",
+                                                  "D6", "D7", "D8")) # this orders our days
+# Loading in endpoint data
+Endpoint <- read.csv("HEB114_Endpoint.csv")
+
+# Loading in food data
+Food <- read.csv("HEB114_Daily_Food_Adjusted.csv")
+
+################################################################################################################
+
+# DATA CLEANING!
+# changing class of Mouse to character
+    Metadata$Mouse <- as.character(Metadata$Mouse)
+    Weight$Mouse <- as.character(Weight$Mouse)
+    EchoMRI$Mouse <- as.character(EchoMRI$Mouse)
+    Endpoint$Mouse <- as.character(Endpoint$Mouse)
+    Food$Mouse <- as.character(Food$Mouse)
+    
+# renaming total food column 
+    Food <- Food %>% 
+      rename(Total_food_consumption = Total.food.consumption)
+# some of the D3s are appearing as NAs. gotta change that! 
+    Food <- Food %>%
+      mutate(Day = if_else(is.na(Day), "D3", Day))
+    
+# need to have change in body mass / weight also be a column within Weight
+    Weight_new <- Weight %>%
+      filter(!Day %in% c("D-4", "D-3")) %>%  # filtering out the days before D-2
+      group_by(Mouse) %>% # Group by Mouse to calculate relative weight changes
+      mutate(
+        Weight_at_D2 = Weight_g[Day == "D-2"], # Isolate the weight at Day "D-2" for each Mouse
+        Weight_gain_g = Weight_g - Weight_at_D2 # Calculate the weight gain
+      ) %>%
+      ungroup()
+    
+# making day a factor AGAIN
+    Food$Day <- factor(Food$Day, levels = c("D-2", "D-1", "D0", "D2", "D3", 
+                                        "D4", "D5", "D6", "D7", "D8"))
+
+# some of the D3s are STILL appearing as NAs. gotta change that! 
+    Food <- Food %>%
+      mutate(Day = if_else(is.na(Day), "D3", Day))
+    
+# making day a factor AGAIN AND IT SHOULD FINALLY WORK!
+    Food$Day <- factor(Food$Day, levels = c("D-2", "D-1", "D0", "D2", "D3", 
+                                        "D4", "D5", "D6", "D7", "D8"))
+    
+# Making some colors
+hormone_group_colors <- scale_color_manual(values = c("PGH" = "plum3", "PL" = "aquamarine3", "Saline" = "goldenrod"))
+
+# I like these for abx vs non abx
+c2 = scale_color_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+
+f2 = scale_fill_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+
+```
+## 2.d. Overview
+Because our data collection plan included regular fasts, the easiest and most useful way for us to quantify and visualize and quantify food consumption is via total food consumption, rather than daily food consumption (over 24 hour periods). 
+
+## 2.d.i. Total Food Consumption Across Treatment Groups
+To start, I'm going to plot the total food consumption of each mouse individually with a trend line. This will help us see the extent of variation in our data and point out any possible errors.
+
+### Food Consumption in Each Indiviudal Mouse
+```{r Total food consumption indiviudal mice, fig.height = 8, fig.width = 18}
+Food_consump_individual_line <- 
+  ggplot(data = Food, aes(x = Day, y = Total_food_consumption)) + 
+        geom_point(aes(color = Hormone)) +
+        geom_smooth(aes(group = Mouse, color = Hormone), 
+                            method = "lm", se = TRUE, linewidth = 0.5, alpha = 0.2) +
+        theme_pubr() + 
+        hormone_group_colors +
+        facet_wrap("Mouse") +
+        labs(title = "Food Consumption Over Time in Each Mouse",
+               x = "Day", y = "Total food consumption (g)") 
+
+Food_consump_individual_line
+```
+
+Mouse 704 is weird and needs to be filtered out!
+```{r Filtering out weird mouse}
+Food_filtered <- Food %>% 
+  filter(Mouse != "704")
+```
+
+For the next visualization, I'm going to create a faint line for each individual mouse, plus a thicker group average. 
+
+### Food Consumption Across Hormone Groups
+
+First I'll group just by hormone, *NOT* considering ABX status:
+```{r Total food consuption by hormone group}
+Food_consuption_by_hormone <- 
+  ggplot(data = Food_filtered, 
+       aes(x = Day, y = Total_food_consumption, group = Mouse, color = Hormone)) + 
+        geom_line(aes(color = Hormone, group = Mouse), alpha = 0.2) +
+        geom_smooth(aes(group = Hormone, color = Hormone), 
+                            method = "lm", se = T, linewidth = 1, alpha = 0.2) +
+        theme_pubr() + 
+        hormone_group_colors +
+        labs(title = "Food Consumption Over Time \nin Each Mouse with Group Averages",
+               x = "Day", y = "Total food consumption (g)") 
+Food_consuption_by_hormone
+```
+PGH mice potentially consuming less food?
+
+Now I'll split the above into ABX and Non-ABX and see if that alters paterns:
+```{r Total food consuption by hormone and ABX group, fig.height = 5, fig.width = 6}
+Food_consuption_by_hormone_and_abx <- 
+  ggplot(data = Food_filtered, 
+       aes(x = Day, y = Total_food_consumption, group = Mouse, color = Hormone)) + 
+        geom_line(aes(color = Hormone, group = Mouse), alpha = 0.2) +
+        geom_smooth(aes(group = Hormone, color = Hormone), 
+                            method = "lm", se = T, linewidth = 1, alpha = 0.2) +
+        theme_pubr() + 
+        facet_wrap("Antibiotics") +
+        hormone_group_colors +
+        labs(title = "Food Consumption Over Time \nin Each Mouse with Group Averages",
+               x = "Day", y = "Total food consumption (g)") 
+Food_consuption_by_hormone_and_abx
+
+# Style 2
+Food_consuption_by_hormone_and_abx2 <- 
+  ggplot(data = Food_filtered, 
+        aes(x = Day, y = Total_food_consumption, 
+        color = Hormone)) + 
+        stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Hormone), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        facet_wrap("Antibiotics") +
+        hormone_group_colors +
+        labs(title = "Food Consumption Over Time \nin Each Mouse with Group Averages",
+               x = "Day", y = "Total food consumption (g)")
+Food_consuption_by_hormone_and_abx2
+```
+Interesting! Potentially an interaction effect between ABX and hormone status.
+
+### Food Consumption Across Antibiotic Groups
+
+Next I'll group just by ABX, *NOT* considering hormone status:
+```{r Total food consuption by abx group}
+Food_consuption_by_abx <- 
+  ggplot(data = Food_filtered, 
+       aes(x = Day, y = Total_food_consumption, group = Mouse, color = Antibiotics)) + 
+        geom_line(aes(color = Antibiotics, group = Mouse), alpha = 0.2) +
+        geom_smooth(aes(group = Antibiotics, color = Antibiotics), 
+                            method = "lm", se = T, linewidth = 1, alpha = 0.2) +
+        theme_pubr() + 
+        c2 + f2 +
+        labs(title = "Food Consumption Over Time \nin Each Mouse with Group Averages",
+               x = "Day", y = "Total food consumption (g)")
+
+Food_consuption_by_abx
+```
+No obvious difference between groups, and lots of noise.
+
+Now let's compare ABX and non-ABX mice within the same hormone group:
+```{r Total food consumption by ABX group and hormone, fig.height = 5, fig.width = 9}
+Food_consumption_by_abx_and_hormone <- 
+  ggplot(data = Food_filtered, 
+       aes(x = Day, y = Total_food_consumption, group = Mouse, color = Antibiotics)) + 
+        geom_line(aes(color = Antibiotics, group = Mouse), alpha = 0.3, linewidth = 0.5) +
+        geom_smooth(aes(group = Antibiotics, color = Antibiotics), 
+                            method = "lm", se = T, linewidth = 1, alpha = 0.2) +
+        theme_pubr() + 
+        facet_wrap("Hormone") +
+        c2 + f2 +
+        labs(title = "Food Consumption Over Time \nin Each Mouse with Group Averages",
+               x = "Day", y = "Total food consumption (g)") 
+Food_consumption_by_abx_and_hormone
+
+# Style 2
+Food_consumption_by_abx_and_hormone2 <- 
+  ggplot(data = Food_filtered, 
+        aes(x = Day, y = Total_food_consumption, 
+        color = Antibiotics)) + 
+        stat_summary(aes(group = Antibiotics), fun = mean, geom = "line", linewidth = 1) +
+        stat_summary(aes(group = Antibiotics), fun = mean, geom = "point", size = 2) +
+        stat_summary(aes(group = Antibiotics), 
+                     fun.data = mean_se, 
+                     geom = "errorbar", 
+                     width = 0.2, 
+                     linewidth = 0.5) +
+        theme_pubr() + 
+        facet_wrap("Hormone") +
+        c2 + f2 +
+        labs(title = "Food Consumption Over Time \nin Each Mouse with Group Averages",
+               x = "Day", y = "Total food consumption (g)")
+Food_consumption_by_abx_and_hormone2
+```
+Hm! Group seeing the largest effect of ABX is saline! 
+
+*NOTE: I believe in style 1, the shading around the line is showing the confidence interval, not standard error. The second format shows actual standard error.*
+
+### Food Consumption Rate Statistical Testing
+_**The outputs for these models are super long, so I'm just going to summmarize. Explore the child docs for the full outputs!**_
+
+Now I'm gonna test if there's a significant difference between the slopes of these food consumption lines for each group. 
+
+- I will start with comparing the rate of food consumption in PGH and PL mice to Saline mice within the Non-ABX groups:
+```{r LME food consumption dif hormone groups non-abx mice, include = FALSE}
+# filter to just non-abx mice
+LME_foodconsump_data_1 <- Food_filtered %>% 
+    filter(Antibiotics == "Non_ABX")
+# setting my reference level... here I want it to be Saline
+    LME_foodconsump_data_1$Hormone <- as.factor(LME_foodconsump_data_1$Hormone)
+    LME_foodconsump_data_1$Hormone <- relevel(LME_foodconsump_data_1$Hormone, ref = "Saline")
+              
+              # running the LME
+LME_foodconsump_1 <- lmer(Total_food_consumption ~ Day * Hormone + (1 | Mouse), 
+                               data = LME_foodconsump_data_1)
+summary(LME_foodconsump_1)
+```
+**Recap of results:** From Day 4 onward (to Day 8), the slopes of the food consumption lines for PGH and PL both significantly differ from the slope of the Saline line, indicating a reduced rate of food consumption in the hormone-injected non-abx mice. 
+
+- And now comparing the rate of food consumption in PGH and PL mice to Saline mice within the ABX groups:
+
+```{r LME food consumption dif hormone groups abx mice, include = FALSE}
+# filter to just non-abx mice
+LME_foodconsump_data_2 <- Food_filtered %>% 
+    filter(Antibiotics == "ABX")
+# setting my reference level... here I want it to be Saline
+    LME_foodconsump_data_2$Hormone <- as.factor(LME_foodconsump_data_2$Hormone)
+    LME_foodconsump_data_2$Hormone <- relevel(LME_foodconsump_data_2$Hormone, ref = "Saline")
+              
+# running the LME
+LME_foodconsump_2 <- lmer(Total_food_consumption ~ Day * Hormone + (1 | Mouse), 
+                               data = LME_foodconsump_data_2)
+summary(LME_foodconsump_2)
+```
+**Recap of results:** From day 5 onward (to Day 8), the rate of food consumption (slope) for PL ABX mice is significantly higher than for saline ABX mice. The rate of food consumption (slope) doesn't significantly differ between saline and PGH ABX mice. 
+
+- Next comparing Non-ABX to ABX in the PGH mice (don't expect significance):
+
+```{r LME food consumption dif abx groups PGH, include = FALSE}
+# PGH
+    # filtering
+    LME_foodconsump_data_3 <- Food_filtered %>% 
+            filter(Hormone == "PGH")
+    
+    # running the LME
+    LME_foodconsump_3 <- lmer(Total_food_consumption ~ Day * Antibiotics + (1 | Mouse), 
+                                   data = LME_foodconsump_data_3)
+    summary(LME_foodconsump_3)
+```
+**Recap of results:** The rates of food consumption do not significantly differ in the PGH ABX and Non-ABX mice.
+
+- Next comparing Non-ABX to ABX in the PL mice (don't expect significance):
+
+```{r LME food consumption dif abx groups PL, include = FALSE}
+# PL
+    # filtering
+    LME_foodconsump_data_4 <- Food_filtered %>% 
+            filter(Hormone == "PL")
+    
+    # running the LME
+    LME_foodconsump_4 <- lmer(Total_food_consumption ~ Day * Antibiotics + (1 | Mouse), 
+                                   data = LME_foodconsump_data_4)
+    summary(LME_foodconsump_4)
+```
+**Recap of results:** The rates of food consumption do not significantly differ in the PL ABX and Non-ABX mice. However, certain days (D3, D6, and D7) are approaching significance (0.05 < p < 0.1).
+
+- Next comparing Non-ABX to ABX in the Saline mice (expect significance):
+
+```{r LME food consumption dif abx groups saline, include = FALSE}
+# Saline
+    # filtering
+    LME_foodconsump_data_5 <- Food_filtered %>% 
+            filter(Hormone == "Saline")
+    
+    # running the LME
+    LME_foodconsump_5 <- lmer(Total_food_consumption ~ Day * Antibiotics + (1 | Mouse), 
+                                   data = LME_foodconsump_data_5)
+    summary(LME_foodconsump_5)
+```
+**Recap of results:** From Day 5 onward, the rates of food consumption are significantly higher in the Saline Non-ABX mice than in the ABX mice. 
+
+The fact that there is an ABX-based effect in the saline mice but not the PGH or PL mice is interesting!
+
+## 2.d.ii. Food Consumption and Weight Gain.
+
+*NOTE:* I'm not 100% confident that these figures are showing anything worth looking at?
+
+I next investigated the relationship between total weight gain and total food consumption. In other words, what is the relationship between the rate at which each mouse is gaining weight and the rate at which it's total food consumption is increasing? 
+
+- Total weight gain was calculated just by subtracting current weight from weight at D-2 (which was considered baseline for this analysis). The data used to generate these plots starts at D-1, which is why the mice don't all start at 0 for total weight gain. 
+
+```{r Data prep for food vs weight analysis, include = FALSE}
+# STEPS:
+
+# Join the data frames so they're together at a given day for each mouse
+    # remove any doubles from food_filtered (D-1 sometimes appears 2x, others too)
+          # I think I can detect this by times when food_consumption_g = 0.0
+    # remove mouse 704 from the weight_new (the outlier)
+    # create a new col in each called Mouse_Day that combines both. THen join at that column
+    # plot total food consumption vs weight gain (should be paired at a given day!)
+
+Food_refiltered <- Food_filtered %>% 
+  filter(Food_consumption_g != 0.0) # filtering my doubles
+  
+  row_counts <- Food_refiltered %>%  # checking I have the same # of rows per mouse
+    group_by(Mouse) %>%
+    summarize(Row_Count = n())
+    print(row_counts, n = 35) # yes is 9 for each!
+    
+Weight_new_filtered <- Weight_new %>% 
+  filter(Mouse != "704", Day != "D-2") # filtering out mouse 704
+
+# New columns
+Food_refiltered <- Food_refiltered %>% 
+  mutate(Mouse_Day = paste(Mouse, Day, sep="_", collapse = NULL))
+
+Weight_new_filtered <- Weight_new_filtered %>% 
+  mutate(Mouse_Day = paste(Mouse, Day, sep="_", collapse = NULL))
+
+nrow(Weight_new_filtered) == nrow(Food_refiltered) # checking they're the same length
+
+Weight_and_food <- Food_refiltered %>% 
+  select(Food_consumption_g:Mouse_Day) %>% 
+  full_join(Weight_new_filtered, by = "Mouse_Day")
+```
+
+### Food Consumption vs Weight Gain Across Hormone Groups 
+
+First I will see if the relationship differs across hormone groups:
+```{r Weight Gain vs Food Consumption 1}
+Food_consump_vs_weight_gain_by_hormone1 <- ggplot(data = Weight_and_food, 
+       aes(x = Total_food_consumption, y = Weight_gain_g, group = Mouse, color = Hormone)) + 
+        geom_line(aes(color = Hormone, group = Mouse), alpha = 0.2) +
+        geom_smooth(aes(group = Hormone, color = Hormone), 
+                            method = "lm", se = T, linewidth = 1, alpha = 0.2) +
+        theme_pubr() + hormone_group_colors + facet_wrap("Antibiotics") +
+        labs(title = "Food Consumption vs Weight Gain \nwith Group Averages",
+               x = "Total Food Consumption (g)", y = "Total Weight Gain (g)") 
+Food_consump_vs_weight_gain_by_hormone1
+```
+
+### Food Consumption vs Weight Gain Across Antibiotic Groups
+Next I will see if the relationship differs across antibiotic groups:
+
+```{r Weight Gain vs Food Consumption 2}
+ggplot(data = Weight_and_food, 
+       aes(x = Total_food_consumption, y = Weight_gain_g, group = Mouse, color = Antibiotics)) + 
+        geom_line(aes(color = Antibiotics, group = Mouse), alpha = 0.2) +
+        geom_smooth(aes(group = Antibiotics, color = Antibiotics), 
+                            method = "lm", se = T, linewidth = 1, alpha = 0.2) +
+        theme_pubr() + facet_wrap("Hormone") + c2 + f2 +
+        labs(title = "Food Consumption vs Weight Gain \nwith Group Averages",
+               x = "Total Food Consumption (g)", y = "Total Weight Gain (g)") 
+```
+*Takeaway:* It looks like for the same amount of food consumed, ABX PGH mice on average gained more weight than Non-ABX PGH mice. This relationship doesn't seem to hold for the PL or Saline mice, suggesting that it's not simply driven by cecal enlargement.
+
+*NOTE:* These weights are not accounting for / subtracting cecum mass. 
+
+
+### Food Consumption vs Weight Gain Statistical Testing
+
+Verifying visual observation that the hormone group slopes don't differ:
+```{r Weight Gain vs Food Consumption Stats 1, include = FALSE}
+LME_foodconsump_weight_data_1 <- Weight_and_food %>% # filtering data
+                  filter(Antibiotics == "Non_ABX")
+              # setting my reference level... here I want it to be Saline
+              LME_foodconsump_weight_data_1$Hormone <- as.factor(LME_foodconsump_weight_data_1$Hormone)
+              LME_foodconsump_weight_data_1$Hormone <- relevel(LME_foodconsump_weight_data_1$Hormone, ref = "Saline")
+              
+LME_foodconsump_weight_1 <- lmer(Weight_gain_g ~ Total_food_consumption * Hormone + (1 | Mouse), 
+                             data = LME_foodconsump_weight_data_1)
+summary(LME_foodconsump_weight_1)
+
+LME_foodconsump_weight_data_2 <- Weight_and_food %>% # filtering data
+                  filter(Antibiotics == "ABX")
+              # setting my reference level... here I want it to be Saline
+              LME_foodconsump_weight_data_2$Hormone <- as.factor(LME_foodconsump_weight_data_2$Hormone)
+              LME_foodconsump_weight_data_2$Hormone <- relevel(LME_foodconsump_weight_data_2$Hormone, ref = "Saline")
+              
+LME_foodconsump_weight_2 <- lmer(Weight_gain_g ~ Total_food_consumption * Hormone + (1 | Mouse), 
+                             data = LME_foodconsump_weight_data_2)
+summary(LME_foodconsump_weight_2)
+```
+
+- None of the hormone slopes significantly differ for Non-ABX with saline as the reference
+
+- For the ABX mice, PGH mice had a significantly different relationship between food consumption and weight gain than saline mice, with PGH mice gaining more weight at a higher rate (i.e., gaining more weight with the same of food consumption). 
+
+- There was no significant difference between the slopes for PL and Saline ABX mice. 
+
+Does the relationship between food consumption and weight gain significantly differ between Non-ABX and ABX mice in each hormone group?
+
+**PGH:**
+```{r Weight Gain vs Food Consumption Stats 2, include = FALSE}
+# PGH abx vs non abx
+LME_foodconsump_weight_data_3 <- Weight_and_food %>% # filtering data
+                  filter(Hormone == "PGH")
+
+# running the LME
+LME_foodconsump_weight_3 <- lmer(Weight_gain_g ~ Total_food_consumption * Antibiotics + (1 | Mouse), 
+                             data = LME_foodconsump_weight_data_3) # model 1
+summary(LME_foodconsump_weight_3)
+
+LME_foodconsump_weight_4 <- lmer(Weight_gain_g ~ Total_food_consumption + Antibiotics + (1 | Mouse), 
+                             data = LME_foodconsump_weight_data_3) # model 2
+summary(LME_foodconsump_weight_4)
+```
+
+Significantly different interaction term of antibiotics for PGH mice. 
+
+*NOTE:* I'm a bit confused on which model is better, since the slopes look similar, just with different intercepts, so I included both above.
+
+**PL:**
+```{r Weight Gain vs Food Consumption Stats 3, include = FALSE}
+# PL abx vs non abx
+LME_foodconsump_weight_data_5 <- Weight_and_food %>% # filtering data
+                  filter(Hormone == "PL")
+
+# running the LME
+LME_foodconsump_weight_5 <- lmer(Weight_gain_g ~ Total_food_consumption * Antibiotics + (1 | Mouse), 
+                             data = LME_foodconsump_weight_data_5) # model 1
+summary(LME_foodconsump_weight_5)
+
+LME_foodconsump_weight_6 <- lmer(Weight_gain_g ~ Total_food_consumption + Antibiotics + (1 | Mouse), 
+                             data = LME_foodconsump_weight_data_5) # model 2
+summary(LME_foodconsump_weight_6)
+```
+Significantly different interaction term of antibiotics for PL mice. 
+
+*NOTE:* I'm a bit confused on which model is better, since the slopes look similar, just with different intercepts, so I included both above.
+
+**Saline:**
+```{r Weight Gain vs Food Consumption Stats 4, include = FALSE}
+# Saline abx vs non abx
+LME_foodconsump_weight_data_7 <- Weight_and_food %>% # filtering data
+                  filter(Hormone == "Saline")
+
+# running the LME
+LME_foodconsump_weight_7 <- lmer(Weight_gain_g ~ Total_food_consumption * Antibiotics + (1 | Mouse), 
+                             data = LME_foodconsump_weight_data_7) # model 1
+summary(LME_foodconsump_weight_7)
+
+LME_foodconsump_weight_8 <- lmer(Weight_gain_g ~ Total_food_consumption + Antibiotics + (1 | Mouse), 
+                             data = LME_foodconsump_weight_data_7) # model 2
+summary(LME_foodconsump_weight_8)
+```
+No significant interaction term of antibiotics for saline with either model type.
+
+## 2.d.ii. Food Consumption and Weight Gain vs Other Variables
+
+I'm not showing any of the plotting here because they all looked uninteresting and the sample sizes were too low to get any good insights, but for reference, I also looked to see if total food consumption and total weight gain had significant relationships (either overall or in specific groups) with the following:
+
+  + Change in lean mass (absolute and percentage) [i.e., did mice that gained more lean mass also gain more weight or eat more?]
+  + Change in fat mass (absolute and percentage) 
+  + Change in free and total water (absolute and percentage) 
+  + Endpoint ITT AUC
+  + Endpoint OGTT AUC
+  + Endpoint fasting blood glucose
+

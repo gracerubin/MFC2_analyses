@@ -1,0 +1,343 @@
+---
+title: "Child Doc 4: Weight Data"
+author: "Grace Rubin"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+<!-- This is the child document containing data visualizations and statistical analyses for MFC2 Weight Data -->
+
+```{r setup child doc 4, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  collapse = TRUE,
+  fig.height = 3, 
+  fig.width = 4, 
+  fig.align = 'center'
+)
+
+# loading packages
+library(ggpubr)
+library(nlme)
+library(tidyverse)
+library(here)
+library(knitr)
+library(DT)
+library(lme4)
+library(lmerTest) 
+```
+
+```{r Reading data child doc 4, include=FALSE}
+# Re-loading in weight data
+Weight <- read.csv("HEB114_Daily_Weight_Simplified.csv")
+      # A little data cleaning:
+      Weight$Day <- trimws(Weight$Day) # this trims off any hanging spaces at the ends of our days
+      Weight$Day <- factor(Weight$Day, levels = c("D-4", "D-3", "D-2", "D-1", 
+                                                  "D0", "D2", "D3", "D4", "D5",
+                                                  "D6", "D7", "D8")) 
+      Weight$Mouse <- as.character(Weight$Mouse)
+
+# Filtering out the very early days that only the ABX mice were measured on
+Weight_filtered <- Weight %>% 
+  filter(Day != "D-4", Day != "D-3")
+
+# We will need metadata and endpoint data too
+Metadata <- read.csv("HEB114_Metadata.csv")
+Endpoint <- read.csv("HEB114_Endpoint.csv")
+
+Metadata$Mouse <- as.character(Metadata$Mouse)
+Endpoint$Mouse <- as.character(Endpoint$Mouse)
+
+Endpoint_new <- Endpoint %>% 
+  mutate(Cecal_contents_g = Cecum_full_g - Cecum_empty_g)
+
+Endpoint_new <- full_join(Endpoint_new, Metadata, by = "Mouse")
+
+# Making some colors
+hormone_group_colors <- scale_color_manual(values = c("PGH" = "plum3", "PL" = "aquamarine3", "Saline" = "goldenrod"))
+
+# I like these for abx vs non abx
+c2 = scale_color_manual(values = c(
+  "ABX" = "midnightblue", 
+  "Non_ABX" = "brown4"))
+
+
+f2 = scale_fill_manual(values = c(
+  "ABX" = "midnightblue", 
+  "Non_ABX" = "brown4"))
+```
+
+## 2.c. Overview
+This section is a simple look at both rates of weight gain and endpoint body mass across the six groups. 
+
+## 2.c.i. Longitudinal Changes in Body Weight 
+
+### Comparing Hormone Groups
+
+*NOTE:* The longitudinal visualizations below reflect actual recorded weight. No corrections were made for cecal mass. 
+```{r Longitudinal weight change across hormone groups, fig.width = 6}
+# Style 1: 
+weight_longitud_by_hormone1 <- 
+  ggplot(Weight_filtered, aes(x = Day, y = Weight_g,color = Hormone, group = Mouse)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+  facet_wrap("Antibiotics") +
+  hormone_group_colors + 
+  labs(title = "Body Weight Across Timepoints by Treatment",
+               x = "Day", y = "Weight (g)")
+weight_longitud_by_hormone1
+
+# Style 2: 
+weight_longitud_by_hormone2 <- 
+  ggplot(Weight_filtered, aes(x = Day, y = Weight_g, color = Hormone)) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 2) +
+  stat_summary(aes(group = Hormone), fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 0.5) +
+  facet_wrap("Antibiotics") +
+  hormone_group_colors + 
+  labs(title = "Body Weight Across Timepoints by Treatment",
+               x = "Day", y = "Weight (g)")
+weight_longitud_by_hormone2
+
+# Style 3: 
+weight_longitud_by_hormone3 <- 
+  ggplot(data = Weight_filtered, aes(x = Day, y = Weight_g, group = Mouse, color = Hormone)) + 
+        geom_line(aes(color = Hormone, group = Mouse), alpha = 0.2) +
+        geom_smooth(aes(group = Hormone, color = Hormone), 
+                            method = "lm", se = T, linewidth = 1, alpha = 0.2) +
+        theme_pubr() + 
+        facet_wrap("Antibiotics") +
+        hormone_group_colors +
+        labs(title = "Body Weight Across Timepoints by Treatment",
+               x = "Day", y = "Weight (g)") 
+weight_longitud_by_hormone3
+```
+
+### Comparing Antibiotic Groups
+```{r Longitudinal weight change across abx groups, fig.width = 8}
+weight_longitud_by_abx1 <- 
+  ggplot(Weight_filtered, aes(x = Day, y = Weight_g, color = Antibiotics, group = Mouse)) +
+  geom_line(alpha = 0.3) +
+  stat_summary(aes(group = Antibiotics), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = Antibiotics), fun = mean, geom = "point", size = 2) +
+  facet_wrap("Hormone") +
+  c2 + 
+  labs(title = "Body Weight Across Timepoints by Treatment",
+               x = "Day", y = "Weight (g)")
+weight_longitud_by_abx1
+
+# Style 2: 
+weight_longitud_by_abx2 <- 
+  ggplot(Weight_filtered, aes(x = Day, y = Weight_g, color = Antibiotics)) +
+  stat_summary(aes(group = Antibiotics), fun = mean, geom = "line", linewidth = 1) +
+  stat_summary(aes(group = Antibiotics), fun = mean, geom = "point", size = 2) +
+  stat_summary(aes(group = Antibiotics), fun.data = mean_se, geom = "errorbar", width = 0.2, linewidth = 0.5) +
+  facet_wrap("Hormone") +
+  c2 + 
+  labs(title = "Body Weight Across Timepoints by Treatment",
+               x = "Day", y = "Weight (g)")
+weight_longitud_by_abx2
+
+# Style 3: 
+weight_longitud_by_abx3 <- 
+  ggplot(data = Weight_filtered, aes(x = Day, y = Weight_g, group = Mouse, color = Antibiotics)) + 
+        geom_line(aes(color = Antibiotics, group = Mouse), alpha = 0.2) +
+        geom_smooth(aes(group = Antibiotics, color = Antibiotics), 
+                            method = "lm", se = T, linewidth = 1, alpha = 0.2) +
+        theme_pubr() + facet_wrap("Hormone") + c2 +
+        labs(title = "Body Weight Across Timepoints by Treatment",
+               x = "Day", y = "Weight (g)") 
+weight_longitud_by_abx3
+```
+
+### Statistics
+We can use LMEs to see if the rate of change in body mass is significantly different between different groups.
+
+First let's see within the Non-ABX mice if hormone affects the rate:
+```{r LME weight gain longitud across hormones non-abx, include = FALSE}
+# filter to just non-abx mice
+weight_longitud_by_hormone_data_1 <- Weight_filtered %>% 
+    filter(Antibiotics == "Non_ABX")
+# setting my reference level... here I want it to be Saline
+    weight_longitud_by_hormone_data_1$Hormone <- as.factor(weight_longitud_by_hormone_data_1$Hormone)
+    weight_longitud_by_hormone_data_1$Hormone <- relevel(weight_longitud_by_hormone_data_1$Hormone, ref = "Saline")
+              
+# running the LME
+weight_longitud_by_hormone_1 <- lmer(Weight_g ~ Day * Hormone + (1 | Mouse), 
+                               data = weight_longitud_by_hormone_data_1)
+summary(weight_longitud_by_hormone_1)
+```
+Though they don't look visually distinct to me, some points are significant. 
+
+- At Days 0 and 4, there is a significant difference between PGH and Saline. Day 2 is also approaching significance (p = 0.0567). 
+
+- At Days 3, 4, and 5, Weight gain rates in PL and Saline are significantly different. 
+
+Next let's see within the ABX mice if hormone affects the rate:
+```{r LME weight gain longitud across hormones abx, include = FALSE}
+# filter to just abx mice
+weight_longitud_by_hormone_data_2 <- Weight_filtered %>% 
+    filter(Antibiotics == "ABX")
+# setting my reference level... here I want it to be Saline
+    weight_longitud_by_hormone_data_2$Hormone <- as.factor(weight_longitud_by_hormone_data_2$Hormone)
+    weight_longitud_by_hormone_data_2$Hormone <- relevel(weight_longitud_by_hormone_data_2$Hormone, ref = "Saline")
+
+# running the LME
+weight_longitud_by_hormone_2 <- lmer(Weight_g ~ Day * Hormone + (1 | Mouse), 
+                               data = weight_longitud_by_hormone_data_2)
+summary(weight_longitud_by_hormone_2)
+```
+
+- There is a significant difference between PGH and Saline at Days 6 and 7. Day 5 is also approaching significance (p = 0.066).
+
+- There is a significant difference between PL and Saline at Days 2, 7, and 8
+
+Now we can see within each hormone group if the Non_ABX and ABX mice significantly differ in weight gain rates (remembering that these LMEs are not considering cecal mass). 
+```{r LME weight gain longitud across abx groups PGH, include = FALSE}
+# filter to just pgh mice
+weight_longitud_by_abx_pgh_data <- Weight_filtered %>% 
+    filter(Hormone == "PGH")
+
+# running the LME 1
+weight_longitud_by_abx_pgh_1 <- lmer(Weight_g ~ Day + Antibiotics + (1 | Mouse), 
+                               data = weight_longitud_by_abx_pgh_data)
+summary(weight_longitud_by_abx_pgh_1) 
+
+# running the LME 2
+weight_longitud_by_abx_pgh_2 <- lmer(Weight_g ~ Day * Antibiotics + (1 | Mouse), 
+                               data = weight_longitud_by_abx_pgh_data)
+summary(weight_longitud_by_abx_pgh_2) 
+```
+As a simple non-interaction fixed effect, antibiotics affects weight gain in pgh mice (p = 0.001). 
+As an interaction effect, antibiotics are significant at every day.
+
+```{r LME weight gain longitud across abx groups PL, include = FALSE}
+# filter to just pl mice
+weight_longitud_by_abx_pl_data <- Weight_filtered %>% 
+    filter(Hormone == "PL")
+
+# running the LME 1
+weight_longitud_by_abx_pl_1 <- lmer(Weight_g ~ Day + Antibiotics + (1 | Mouse), 
+                               data = weight_longitud_by_abx_pl_data)
+summary(weight_longitud_by_abx_pl_1) 
+
+# running the LME 2
+weight_longitud_by_abx_pl_2 <- lmer(Weight_g ~ Day * Antibiotics + (1 | Mouse), 
+                               data = weight_longitud_by_abx_pl_data)
+summary(weight_longitud_by_abx_pl_2) 
+```
+As a simple non-interaction fixed effect, antibiotics do not significantly affect weight gain in pl mice.
+
+As an interaction effect, the weight gain slopes significantly differ at days 3, 4, 6, 7, and 8.
+
+```{r LME weight gain longitud across abx groups Saline, include = FALSE}
+# filter to just saline mice
+weight_longitud_by_abx_saline_data <- Weight_filtered %>% 
+    filter(Hormone == "Saline")
+
+# running the LME 1
+weight_longitud_by_abx_saline_1 <- lmer(Weight_g ~ Day + Antibiotics + (1 | Mouse), 
+                               data = weight_longitud_by_abx_saline_data)
+summary(weight_longitud_by_abx_saline_1) 
+
+# running the LME 2
+weight_longitud_by_abx_saline_2 <- lmer(Weight_g ~ Day * Antibiotics + (1 | Mouse), 
+                               data = weight_longitud_by_abx_saline_data)
+summary(weight_longitud_by_abx_saline_2) 
+```
+As a simple non-interaction fixed effect, antibiotics do not significantly affect weight gain in saline mice.
+
+As an interaction effect, the weight gain slopes do not significantly differ at any days. 
+
+*** 
+
+## 2.c.ii. Endpoint differences in Body Weight 
+
+By D8, we can assume that cecum mass is contributing significantly to body weight in the antibiotic mice. For these endpoint comparisons, we will calculate them both corrected for cecal mass and uncorrected. I'm subtracting by full cecal mass rather than cecal contents, because the effect of abx on the mass of the cecal epithelium also seems worth correcting for to me. But I could easily switch this to cecal contents!
+
+```{r Combining weight with cecal info, include = FALSE}
+# filtering both DFs
+Weight_endpoint <- Weight_filtered %>% 
+    filter(Day == "D8") %>% 
+    select(Day, Mouse, Weight_g)
+
+Endpoint_cecum <- Endpoint_new %>% 
+  select(Mouse, Cecum_full_g:Group_Total)
+
+Weights_adjusted_by_cecum <- full_join(Weight_endpoint, Endpoint_cecum, by = "Mouse")
+
+Weights_adjusted_by_cecum <- Weights_adjusted_by_cecum %>% 
+  mutate(Weight_minus_cecum = Weight_g - Cecum_full_g)
+```
+
+### Comparing Hormone Groups
+```{r Comparing endpoint weight across hormone groups, fig.height = 4}
+
+# UNADJUSTED BY CECUM
+endpoint_weight_by_hormone <- 
+  ggplot(data = Weights_adjusted_by_cecum, aes(x = Hormone, y = Weight_g)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  hormone_group_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Weights Across Groups \n(Unadjusted)",
+       x = "Hormone and Antibiotic Group", y = "Weight (g)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(comparisons = list(c("PGH", "Saline"), c("PL", "Saline"), c("PL", "PGH")), method = "t.test",  label = "p.format")
+
+endpoint_weight_by_hormone
+
+# ADJUSTED BY CECUM
+endpoint_weight_cecum_adjusted_by_hormone <- 
+  ggplot(data = Weights_adjusted_by_cecum, aes(x = Hormone, y = Weight_minus_cecum)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = Hormone), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  hormone_group_colors +
+  facet_wrap("ABX") +
+  labs(title = "Endpoint Weights Across Groups \n(Adjusted by Cecal Mass)",
+       x = "Hormone and Antibiotic Group", y = "Weight (g) (Adjusted by Cecal Mass)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(comparisons = list(c("PGH", "Saline"), c("PL", "Saline"), c("PL", "PGH")), method = "t.test",  label = "p.format")
+
+endpoint_weight_cecum_adjusted_by_hormone
+```
+
+### Comparing Antibiotic Groups
+```{r Comparing endpoint weight across abx groups, fig.width = 6, fig.height = 4}
+
+# UNADJUSTED BY CECUM
+endpoint_weight_by_abx <- 
+  ggplot(data = Weights_adjusted_by_cecum, aes(x = ABX, y = Weight_g)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 + facet_wrap("Hormone") +
+  labs(title = "Endpoint Weights Across Groups \n(Unadjusted)",
+       x = "Hormone and Antibiotic Group", y = "Weight (g)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(comparisons = list(c("ABX", "Non_ABX")), method = "t.test",  label = "p.format")
+
+endpoint_weight_by_abx
+
+# ADJUSTED BY CECUM
+endpoint_weight_cecum_adjusted_by_abx <- 
+  ggplot(data = Weights_adjusted_by_cecum, aes(x = ABX, y = Weight_minus_cecum)) + 
+  geom_boxplot() +
+  geom_jitter(aes(color = ABX), width = 0.2, height = 0) + 
+  theme_pubr() + 
+  c2 + facet_wrap("Hormone") +
+  labs(title = "Endpoint Weights Across Groups \n(Adjusted by Cecal Mass)",
+       x = "Hormone and Antibiotic Group", y = "Weight (g) (Adjusted by Cecal Mass)") + 
+  theme(legend.position = "right") + 
+  stat_compare_means(comparisons = list(c("ABX", "Non_ABX")), method = "t.test",  label = "p.format")
+
+endpoint_weight_cecum_adjusted_by_abx
+```
+
