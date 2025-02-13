@@ -1,0 +1,1234 @@
+---
+title: "Child Doc 9: Relative Abundance"
+author: "Grace Rubin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+<!-- This is the child document containing data visualizations and statistical analyses for MFC2 Relative Abundance Data -->
+
+```{r setup child 9, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  collapse = TRUE,
+  fig.height = 5, 
+  fig.width = 4, 
+  fig.align = 'center',
+  comment = NA
+)
+
+# loading packages
+library(ggpubr)
+library(nlme)
+library(tidyverse)
+library(here)
+library(knitr)
+library(DT)
+library(lme4)
+library(lmerTest) 
+library(phyloseq)
+library(vegan)
+library(qiime2R)
+```
+
+```{r setting theme child 9, include = FALSE}
+# making our theme
+MFC2_theme <- theme_pubr()
+MFC2_theme$strip.background = element_blank()
+MFC2_theme$strip.text = element_text(face = "bold", size = 10)
+MFC2_theme$strip.placement = "outside"
+MFC2_theme$legend.key.size = unit(0.3, "lines")
+MFC2_theme$legend.title = element_blank()
+MFC2_theme$axis.line = element_blank()
+MFC2_theme$panel.border = element_rect(fill = NA, color = "black")
+MFC2_theme$legend.margin = margin(0,0,0,0)
+theme_set(MFC2_theme)
+
+# setting colors
+hormone_group_colors <- scale_color_manual(values = c("PGH" = "plum3", "PL" = "aquamarine3", "Saline" = "goldenrod"))
+
+hormone_fill_colors <- scale_fill_manual(values = c("PGH" = "plum3", "PL" = "aquamarine3", "Saline" = "goldenrod"))
+
+day_colors <- scale_color_manual(values = c("D-3" = '#e6194b', "D0" = "goldenrod", "D3" = '#3cb44b', "D5" = "turquoise", "D8" = '#f032e6'))
+
+# A set of 20 easily distinguishable colors
+colors20 <- scale_color_manual(values = c( '#e6beff','#008080', '#fffac8', '#800000', '#aaffc3', '#9a6324','#808000', '#ffd8b1','#bcf60c', '#fabebe', '#000075', '#808080', '#ffffff', '#000000', '#e6194b', '#3cb44b',
+'#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6'))
+
+# Fill versions (sometimes ggplot using fill instead of color)
+fill_colors20 <- scale_fill_manual(values = c( '#e6beff','#008080', '#fffac8', '#800000', '#aaffc3', '#9a6324','#808000', '#ffd8b1','#bcf60c', '#fabebe', '#000075', '#808080', '#ffffff', '#000000', '#e6194b', '#3cb44b',
+'#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6'))
+
+# I like these for abx vs non abx
+c2 = scale_color_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+
+f2 = scale_fill_manual(values = c(
+  "ABX" = "cornflowerblue", 
+  "Non_ABX" = "palevioletred"))
+
+# setting shapes
+shapes2 <-  scale_shape_manual(values = c(19,1)) # closed circle, open circle
+shapes4 <-  scale_shape_manual(values = c(19,1,8,4)) # closed circle, open circle, star, x
+shapes5 <-  scale_shape_manual(values = c(19,1,8,4,10)) 
+```
+
+```{r reading data child 9, include = FALSE}
+# METADATA
+meta <- read_tsv("HEB114_metadata.tsv") # loading in meta data
+  # filtering to just the mouse samples
+    meta <- meta %>% 
+      filter(Study == "HEB114_Mouse")
+      # verify that mouse numbers are being read as characters
+      class(meta$Mouse_Num) # if not character, change to be character
+      # what days do we have?
+      unique(meta$Day) # 6 time points
+      # change Day to be a factor (ordered by timepoint)
+      meta$Day <- factor(meta$Day, levels = c("D-5", "D-3", "D0", "D3", "D5", "D8"))
+      class(meta$Day) # verify that it worked using class()
+      
+      # We need to give phyloseq metadata with sample IDs as rownames, NOT an individual column
+      meta <- as.data.frame(meta) # switching from tibble to DF (don't worry about this)
+      rownames(meta) <- meta$SampleID # setting row names
+      
+      # Save a backup version of meta that will remain in data frame format
+      meta_backup <- meta
+      
+# ASV TABLE
+asv_table <- read_qza("Decontam_Mouse_Study_Table_1k.qza")$data
+
+# ASV TAXONOMY
+taxonomy <-  read_qza("HEB114_taxonomy.qza")$data %>% parse_taxonomy()
+
+# ASV PHYLOGENY
+tree <- read_qza("rooted_tree.qza")$data
+```
+
+```{r making phyloseq object child 9, include = FALSE}
+# create phyloseq-formatted metadata table
+phylo_meta <- sample_data(meta)
+
+# create phylosec-formatted asv table (aka otu table)
+phylo_table <- otu_table(asv_table, taxa_are_rows = T)
+        # make a backup DF
+           asv_table_df <- asv_table %>% data.frame() %>% mutate(ASV = rownames(asv_table)) 
+           rownames(asv_table_df) = NULL
+
+        
+# create phyloseq formatted taxonomy
+phylo_tax <- tax_table(as.matrix(taxonomy))
+        # make a backup DF
+            taxonomy_df <- taxonomy %>% data.frame() %>% mutate(ASV = rownames(taxonomy))
+            rownames(taxonomy_df) = NULL
+            
+# create phyloseq formatted phylogeny
+phylo_tree <- phy_tree(tree)
+
+# Last, merge all 4 into one object
+phylo_all <- phyloseq(phylo_table, phylo_meta, phylo_tax, phylo_tree)
+
+# Filtered phylo object just for the mice with a conventional gut microbiome
+phylo_nonabx <-  subset_samples(phylo_all, Antibiotics == "Non_ABX")
+
+# Make a new phylo object that includes just the saline and PGH mice (i.e., filtering out the PL mice from phylo_nonabx)
+phylo_PGH <-  subset_samples(phylo_nonabx, Hormone != "PL")
+
+## Make a new phylo object that includes just the saline and PL mice (i.e., filtering out the PGH mice from phylo_nonabx)
+phylo_PL <-  subset_samples(phylo_nonabx, Hormone != "PGH")
+```
+
+## 3.d. Overview
+
+In this section, I will quantify and visualize group differences and longitudinal changes in the relative abundance of targeted taxa. 
+
+I will start with a high level look at general taxonomic groups, and then zero in on taxa in the literature that have previously been identified as differentially abundant either in murine pregnancy or in murine models of metabolic syndrome or GDM. 
+
+I will then do some visualizations of overall taxonomic composition
+
+## 3.d.i. High level taxonomic investigation
+
+```{r taxonomic investigations data prep, include = FALSE}
+# Transform phyloseq object to long format
+phylo_nonabx_long <- psmelt(phylo_nonabx)
+
+# Calculate relative abundance
+phylo_nonabx_long <- phylo_nonabx_long %>%
+    group_by(Sample) %>%
+    mutate(Relative_abundance = Abundance / sum(Abundance)) %>%
+    ungroup()
+
+# Add a column for the full taxonomic path in case individual taxon names are not unique
+# (i.e. same genus name found in two different families)
+phylo_nonabx_long <- phylo_nonabx_long %>%
+  mutate(across(.cols = Phylum:Species, .fns = ~ replace(., is.na(.), "Other"))) %>%
+  mutate(Full_Taxonomy = paste(Phylum, Class, Order, Family, Genus, Species, sep = "_"))
+
+```
+
+Changes / differences in individual taxa can be presented a number of ways. Below shows some experimentation with different visualization styles --- I'm undecided on which tell the "story of the data" best. 
+
+Additionally, due to my caution around my Day 8 samples, I will sometimes opt to visualize with D5 set as endpoint. 
+
+First let's investigate broad strokes changes in the relative abundances of two major bacterial phyla: **Bacteroidetes** and **Firmicutes**. 
+
+```{r Bacteroidetes relative abundance filtering}
+# Filter the data for the "Bacteroidetes" and summarize the relative abundance 
+Bacteroidetes_relative_abundance <- phylo_nonabx_long %>%
+  filter(Phylum == "Bacteroidetes") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Bacteroidetes = sum(Relative_abundance)) %>%
+  ungroup()
+```
+
+For our first plot, I'll visualize relative abundance in each group across all days
+```{r Bacteroidetes relative abundance plot 1}
+# Plot 1: 
+Bacteroidetes_relative_abundance %>%
+  ggplot(aes(x = Day, 
+             y = Bacteroidetes, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + 
+  hormone_group_colors + 
+  labs(title = "Longitudinal Changes in \nBacteroidetes Relative Abundance \nAcross Hormone Groups",
+           x = "Day", y = "Bacteroidetes Relative Abundance") 
+  
+```
+
+We can also show each hormone in it's own panel
+```{r Bacteroidetes relative abundance plot 2}
+# Plot 2:
+Bacteroidetes_relative_abundance %>%
+  ggplot(aes(x = Day, 
+             y = Bacteroidetes, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = .7) + facet_wrap(~Hormone) + 
+  hormone_group_colors + 
+  labs(title = "Longitudinal Changes in \nBacteroidetes Relative Abundance \nAcross Hormone Groups",
+           x = "Day", y = "Bacteroidetes Relative Abundance")
+```
+
+Next I'll visualize this as baseline to intervention changes
+```{r Bacteroidetes relative abundance plot 3}
+# Plot 3: 
+Bacteroidetes_relative_abundance %>%
+  ggplot(aes(x = TimePoint, 
+             y = Bacteroidetes, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + 
+  hormone_group_colors + 
+  labs(title = "Longitudinal Changes in \nBacteroidetes Relative Abundance \nAcross Hormone Groups",
+           x = "Time Point", y = "Bacteroidetes Relative Abundance")
+```
+
+I'm curious to visualize as a bar graph showing changes from baseline (D-3) to endpoint (D8). 
+
+To be comprehensive, I will then do the same with baseline (D-3) to endpoint (D5), since the D8s are suspicious. 
+```{r Bacteroidetes relative abundance plot 4}
+# Plot 4: 
+
+  # summary data and filtering
+    summary_data_Bacteroidetes_relative_abundance <- Bacteroidetes_relative_abundance %>%
+      group_by(Hormone, Day) %>%
+      summarize(
+        mean_Bacteroidetes = mean(Bacteroidetes, na.rm = TRUE),
+        sd_Bacteroidetes = sd(Bacteroidetes, na.rm = TRUE),
+        se_Bacteroidetes = sd_Bacteroidetes / sqrt(n()),  
+        ymin = mean_Bacteroidetes - se_Bacteroidetes,
+        ymax = mean_Bacteroidetes + se_Bacteroidetes
+      ) %>% 
+      ungroup()
+
+    # plotting
+    summary_data_Bacteroidetes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D8") %>% 
+        ggplot(aes(x = Day,
+                   y = mean_Bacteroidetes,
+                   fill = Hormone,
+                   alpha = Day)) +
+      geom_bar(stat = "identity") +
+      geom_errorbar(aes(ymin=ymin, ymax=ymax), width=.2,
+                     position=position_dodge(.9)) + facet_wrap(~Hormone) + 
+      labs(title = "Baseline vs Endpoint \nBacteroidetes Relative Abundance \nAcross Hormone Groups",
+           x = "Day", y = "Bacteroidetes Relative Abundance") + 
+      hormone_fill_colors + 
+      scale_alpha_manual(values = c("D-3" = 0.5, "D8" = 1))
+    
+# Plot 5:
+        summary_data_Bacteroidetes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D5") %>% 
+        ggplot(aes(x = Day,
+                   y = mean_Bacteroidetes,
+                   fill = Hormone,
+                   alpha = Day)) +
+      geom_bar(stat = "identity") +
+      geom_errorbar(aes(ymin=ymin, ymax=ymax), width=.2,
+                     position=position_dodge(.9)) + facet_wrap(~Hormone) + 
+      labs(title = "Baseline vs Endpoint \nBacteroidetes Relative Abundance \nAcross Hormone Groups",
+           x = "Day", y = "Bacteroidetes Relative Abundance") + 
+      hormone_fill_colors + 
+      scale_alpha_manual(values = c("D-3" = 0.5, "D8" = 1))
+```
+Stats testing is hidden from this html output, but these are the key results:
+
+- No paired t-tests are significant for differences in Bacteroidetes relative abundance at D-3 and D8 for any of the hormone groups 
+
+- For differences in Bacteroidetes relative abundance at D-3 and D5, the paired t-test is significant for PL mice (p = 0.036) but not for saline or PGH. 
+
+```{r Bacteroidetes relative abundance stats testing 1, include = FALSE}
+# I want to see if the bar plots significantly differ!
+
+# Day -3 to Day 8 SALINE
+Bacteroidetes_rel_abun_ttest_data_saline <- Bacteroidetes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D8") %>% filter(Hormone == "Saline")
+
+# Fixing the order to do a paired t-test
+Bacteroidetes_rel_abun_ttest_data_saline <- Bacteroidetes_rel_abun_ttest_data_saline %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Bacteroidetes_rel_abun_ttest_result_saline_1 <- t.test(Bacteroidetes ~ TimePoint, data = Bacteroidetes_rel_abun_ttest_data_saline, paired = T) 
+
+print(Bacteroidetes_rel_abun_ttest_result_saline_1) # p = 0.775 not significant
+
+# Day -3 to Day 8 PGH
+Bacteroidetes_rel_abun_ttest_data_pgh <- Bacteroidetes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D8") %>% filter(Hormone == "PGH")
+
+# Fixing the order to do a paired t-test
+Bacteroidetes_rel_abun_ttest_data_pgh <- Bacteroidetes_rel_abun_ttest_data_pgh %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Bacteroidetes_rel_abun_ttest_result_pgh_1 <- t.test(Bacteroidetes ~ TimePoint, data = Bacteroidetes_rel_abun_ttest_data_pgh, paired = T) 
+
+print(Bacteroidetes_rel_abun_ttest_result_pgh_1) # p = 0.736 not significant
+
+# Day -3 to Day 8 PL
+Bacteroidetes_rel_abun_ttest_data_pl <- Bacteroidetes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D8") %>% filter(Hormone == "PL")
+
+# Fixing the order to do a paired t-test
+Bacteroidetes_rel_abun_ttest_data_pl <- Bacteroidetes_rel_abun_ttest_data_pl %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Bacteroidetes_rel_abun_ttest_result_pl_1 <- t.test(Bacteroidetes ~ TimePoint, data = Bacteroidetes_rel_abun_ttest_data_pl, paired = T) 
+
+print(Bacteroidetes_rel_abun_ttest_result_pl_1) # p = 0.223 not significant
+
+# Day -3 to Day 5 SALINE
+Bacteroidetes_rel_abun_ttest_data_saline_2 <- Bacteroidetes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D5") %>% filter(Hormone == "Saline")
+
+# Fixing the order to do a paired t-test
+Bacteroidetes_rel_abun_ttest_data_saline_2 <- Bacteroidetes_rel_abun_ttest_data_saline_2 %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Bacteroidetes_rel_abun_ttest_result_saline_2 <- t.test(Bacteroidetes ~ TimePoint, data = Bacteroidetes_rel_abun_ttest_data_saline_2, paired = T) 
+
+print(Bacteroidetes_rel_abun_ttest_result_saline_2) # p = 0.5425 not significant
+
+# Day -3 to Day 5 PGH
+Bacteroidetes_rel_abun_ttest_data_pgh_2 <- Bacteroidetes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D5") %>% filter(Hormone == "PGH")
+
+# Fixing the order to do a paired t-test
+Bacteroidetes_rel_abun_ttest_data_pgh_2 <- Bacteroidetes_rel_abun_ttest_data_pgh_2 %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Bacteroidetes_rel_abun_ttest_result_pgh_2 <- t.test(Bacteroidetes ~ TimePoint, data = Bacteroidetes_rel_abun_ttest_data_pgh_2, paired = T) 
+
+print(Bacteroidetes_rel_abun_ttest_result_pgh_2) # p = 0.1746 not significant
+
+# Day -3 to Day 5 PL
+Bacteroidetes_rel_abun_ttest_data_pl_2 <- Bacteroidetes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D5") %>% filter(Hormone == "PL")
+
+# Fixing the order to do a paired t-test
+Bacteroidetes_rel_abun_ttest_data_pl_2 <- Bacteroidetes_rel_abun_ttest_data_pl_2 %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Bacteroidetes_rel_abun_ttest_result_pl_2 <- t.test(Bacteroidetes ~ TimePoint, data = Bacteroidetes_rel_abun_ttest_data_pl_2, paired = T) 
+
+print(Bacteroidetes_rel_abun_ttest_result_pl_2) # p = 0.036 significant! ***
+
+```
+
+Next I'm going to calculate and plot the absolute change in Bacteroidetes % for each mouse
+
+*Change in Bacteroidetes from D-3 to D8 (i.e., D8 rel abundance - D-3 rel abundance)*
+```{r Bacteroidetes relative abundance plot 6}
+# summary data and filtering
+summary_data_change_Bacteroidetes_relative_abundance1 <- Bacteroidetes_relative_abundance %>%
+            group_by(Mouse_Num, Hormone) %>%
+            summarize(
+              change_Bacteroidetes = Bacteroidetes[Day == "D8"] - 
+                  Bacteroidetes[Day == "D-3"]
+            ) %>% 
+            ungroup()
+        
+summary_data_change_Bacteroidetes_relative_abundance1 <-    summary_data_change_Bacteroidetes_relative_abundance1 %>% 
+        group_by(Hormone) %>%
+            summarize(
+              mean_change_Bacteroidetes = mean(change_Bacteroidetes, na.rm = TRUE),
+              sd_change_Bacteroidetes = sd(change_Bacteroidetes, na.rm = TRUE),
+              se_change_Bacteroidetes = sd_change_Bacteroidetes / sqrt(n()),  
+              ymin = mean_change_Bacteroidetes - se_change_Bacteroidetes,
+              ymax = mean_change_Bacteroidetes + se_change_Bacteroidetes
+            ) %>% 
+            ungroup()
+
+# plotting
+ggplot(data = summary_data_change_Bacteroidetes_relative_abundance1, aes(x = Hormone,
+               y = mean_change_Bacteroidetes,
+               fill = Hormone)) +
+  geom_bar(stat = "identity") +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.5) + # solid black line at 0
+  geom_errorbar(aes(ymin=ymin, ymax=ymax), width=.2,
+                 position=position_dodge(.9)) + labs(title = "Change in Bacteroidetes \nRelative Abundance \nAcross Hormone Groups",
+           x = "Hormone Group", y = "Change in Bacteroidetes Relative Abundance") + hormone_fill_colors
+```
+
+The stats analyses are hidden in this HTML, but with this group comparision in Bacteroidetes change, error bars are high enough that no two groups reach significance in difference. 
+
+```{r Bacteroidetes rel abundance stats 2, include = FALSE}
+# calculate change
+data_change_Bacteroidetes_relative_abundance1 <- Bacteroidetes_relative_abundance %>%
+            group_by(Mouse_Num, Hormone) %>%
+            summarize(
+              change_Bacteroidetes = Bacteroidetes[Day == "D8"] - 
+                  Bacteroidetes[Day == "D-3"]
+            ) %>% 
+            ungroup()
+
+data_change_Bacteroidetes_relative_abundance1_plvssaline <- data_change_Bacteroidetes_relative_abundance1 %>% 
+  filter(Hormone != "PGH")
+
+# Unpaired t-test
+ttest_change_Bacteroidetes_relative_abundance1_plvssaline <- t.test(change_Bacteroidetes ~ Hormone, data = data_change_Bacteroidetes_relative_abundance1_plvssaline, paired = F) 
+
+print(ttest_change_Bacteroidetes_relative_abundance1_plvssaline) 
+
+# calculate change
+data_change_Bacteroidetes_relative_abundance1_plvspgh <- data_change_Bacteroidetes_relative_abundance1 %>% 
+  filter(Hormone != "Saline")
+
+# Unpaired t-test
+ttest_change_Bacteroidetes_relative_abundance1_plvspgh <- t.test(change_Bacteroidetes ~ Hormone, data = data_change_Bacteroidetes_relative_abundance1_plvspgh, paired = F) 
+
+print(ttest_change_Bacteroidetes_relative_abundance1_plvspgh) 
+```
+
+Next I'm going to repeat everything that I did above, but for Firmicutes.
+```{r Firmicutes relative abundance filtering}
+Firmicutes_relative_abundance <- phylo_nonabx_long %>%
+  filter(Phylum == "Firmicutes") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Firmicutes = sum(Relative_abundance)) %>%
+  ungroup()
+```
+
+```{r Firmicutes relative abundance plot 1}
+# Plot 1: 
+Firmicutes_relative_abundance %>%
+  ggplot(aes(x = Day, 
+             y = Firmicutes, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + 
+  hormone_group_colors + 
+  labs(title = "Longitudinal Changes in \nFirmicutes Relative Abundance \nAcross Hormone Groups",
+           x = "Day", y = "Firmicutes Relative Abundance") 
+```
+
+```{r Firmicutes relative abundance plot 2}
+# Plot 2:
+Firmicutes_relative_abundance %>%
+  ggplot(aes(x = Day, 
+             y = Firmicutes, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = .7) + facet_wrap(~Hormone) + 
+  hormone_group_colors + 
+  labs(title = "Longitudinal Changes in \nFirmicutes Relative Abundance \nAcross Hormone Groups",
+           x = "Day", y = "Firmicutes Relative Abundance")
+```
+
+```{r Firmicutes relative abundance plot 3}
+# Plot 3: 
+Firmicutes_relative_abundance %>%
+  ggplot(aes(x = TimePoint, 
+             y = Firmicutes, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + 
+  hormone_group_colors + 
+  labs(title = "Longitudinal Changes in \nFirmicutes Relative Abundance \nAcross Hormone Groups",
+           x = "Time Point", y = "Firmicutes Relative Abundance")
+```
+
+```{r Firmicutes relative abundance plot 4}
+# Plot 4: 
+
+  # summary data and filtering
+    summary_data_Firmicutes_relative_abundance <- Firmicutes_relative_abundance %>%
+      group_by(Hormone, Day) %>%
+      summarize(
+        mean_Firmicutes = mean(Firmicutes, na.rm = TRUE),
+        sd_Firmicutes = sd(Firmicutes, na.rm = TRUE),
+        se_Firmicutes = sd_Firmicutes / sqrt(n()),  
+        ymin = mean_Firmicutes - se_Firmicutes,
+        ymax = mean_Firmicutes + se_Firmicutes
+      ) %>% 
+      ungroup()
+
+    # plotting
+    summary_data_Firmicutes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D8") %>% 
+        ggplot(aes(x = Day,
+                   y = mean_Firmicutes,
+                   fill = Hormone,
+                   alpha = Day)) +
+      geom_bar(stat = "identity") +
+      geom_errorbar(aes(ymin=ymin, ymax=ymax), width=.2,
+                     position=position_dodge(.9)) + facet_wrap(~Hormone) + 
+      labs(title = "Baseline vs Endpoint \nFirmicutes Relative Abundance \nAcross Hormone Groups",
+           x = "Day", y = "Firmicutes Relative Abundance") + 
+      hormone_fill_colors +
+      scale_alpha_manual(values = c("D-3" = 0.5, "D8" = 1))
+    
+# Plot 5:
+    summary_data_Firmicutes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D5") %>% 
+        ggplot(aes(x = Day,
+                   y = mean_Firmicutes,
+                   fill = Hormone,
+                   alpha = Day)) +
+      geom_bar(stat = "identity") +
+      geom_errorbar(aes(ymin=ymin, ymax=ymax), width=.2,
+                     position=position_dodge(.9)) + facet_wrap(~Hormone) + 
+      labs(title = "Baseline vs Endpoint \nFirmicutes Relative Abundance \nAcross Hormone Groups",
+           x = "Day", y = "Firmicutes Relative Abundance") + 
+      hormone_fill_colors +
+      scale_alpha_manual(values = c("D-3" = 0.5, "D8" = 1))
+```
+Stats testing is hidden from this html output, but these are the key results:
+
+- No paired t-tests are significant for differences in Firmicutes relative abundance at D-3 and D8 for any of the hormone groups 
+
+- For differences in Firmicutes relative abundance at D-3 and D5, the paired t-test is significant for PL mice (p = 0.035) but not for saline or PGH. 
+
+- This matches the results found for Bacteroidetes.
+
+```{r Firmicutes relative abundance stats testing 1, include = FALSE}
+# I want to see if the bar plots significantly differ!
+
+# Day -3 to Day 8 SALINE
+Firmicutes_rel_abun_ttest_data_saline <- Firmicutes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D8") %>% filter(Hormone == "Saline")
+
+# Fixing the order to do a paired t-test
+Firmicutes_rel_abun_ttest_data_saline <- Firmicutes_rel_abun_ttest_data_saline %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Firmicutes_rel_abun_ttest_result_saline_1 <- t.test(Firmicutes ~ TimePoint, data = Firmicutes_rel_abun_ttest_data_saline, paired = T) 
+
+print(Firmicutes_rel_abun_ttest_result_saline_1) # p = 0.77 not signif
+
+# Day -3 to Day 8 PGH
+Firmicutes_rel_abun_ttest_data_pgh <- Firmicutes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D8") %>% filter(Hormone == "PGH")
+
+# Fixing the order to do a paired t-test
+Firmicutes_rel_abun_ttest_data_pgh <- Firmicutes_rel_abun_ttest_data_pgh %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Firmicutes_rel_abun_ttest_result_pgh_1 <- t.test(Firmicutes ~ TimePoint, data = Firmicutes_rel_abun_ttest_data_pgh, paired = T) 
+
+print(Firmicutes_rel_abun_ttest_result_pgh_1) # p = 0.76 not signif
+
+# Day -3 to Day 8 PL
+Firmicutes_rel_abun_ttest_data_pl <- Firmicutes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D8") %>% filter(Hormone == "PL")
+
+# Fixing the order to do a paired t-test
+Firmicutes_rel_abun_ttest_data_pl <- Firmicutes_rel_abun_ttest_data_pl %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Firmicutes_rel_abun_ttest_result_pl_1 <- t.test(Firmicutes ~ TimePoint, data = Firmicutes_rel_abun_ttest_data_pl, paired = T) 
+
+print(Firmicutes_rel_abun_ttest_result_pl_1) # p = 0.22 not signif
+
+# Day -3 to Day 5 SALINE
+Firmicutes_rel_abun_ttest_data_saline_2 <- Firmicutes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D5") %>% filter(Hormone == "Saline")
+
+# Fixing the order to do a paired t-test
+Firmicutes_rel_abun_ttest_data_saline_2 <- Firmicutes_rel_abun_ttest_data_saline_2 %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Firmicutes_rel_abun_ttest_result_saline_2 <- t.test(Firmicutes ~ TimePoint, data = Firmicutes_rel_abun_ttest_data_saline_2, paired = T) 
+
+print(Firmicutes_rel_abun_ttest_result_saline_2) # p = 0.55 not signif
+
+# Day -3 to Day 5 PGH
+Firmicutes_rel_abun_ttest_data_pgh_2 <- Firmicutes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D5") %>% filter(Hormone == "PGH")
+
+# Fixing the order to do a paired t-test
+Firmicutes_rel_abun_ttest_data_pgh_2 <- Firmicutes_rel_abun_ttest_data_pgh_2 %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Firmicutes_rel_abun_ttest_result_pgh_2 <- t.test(Firmicutes ~ TimePoint, data = Firmicutes_rel_abun_ttest_data_pgh_2, paired = T) 
+
+print(Firmicutes_rel_abun_ttest_result_pgh_2) # p = 0.17 not signif
+
+# Day -3 to Day 5 PL
+Firmicutes_rel_abun_ttest_data_pl_2 <- Firmicutes_relative_abundance %>% 
+      filter(Day == "D-3" | Day == "D5") %>% filter(Hormone == "PL")
+
+# Fixing the order to do a paired t-test
+Firmicutes_rel_abun_ttest_data_pl_2 <- Firmicutes_rel_abun_ttest_data_pl_2 %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+Firmicutes_rel_abun_ttest_result_pl_2 <- t.test(Firmicutes ~ TimePoint, data = Firmicutes_rel_abun_ttest_data_pl_2, paired = T) 
+
+print(Firmicutes_rel_abun_ttest_result_pl_2) # p = 0.035 signif!
+
+```
+
+```{r Firmicutes relative abundance plot 6}
+# summary data and filtering
+summary_data_change_Firmicutes_relative_abundance1 <- Firmicutes_relative_abundance %>%
+            group_by(Mouse_Num, Hormone) %>%
+            summarize(
+              change_Firmicutes = Firmicutes[Day == "D8"] - 
+                  Firmicutes[Day == "D-3"]
+            ) %>% 
+            ungroup()
+        
+summary_data_change_Firmicutes_relative_abundance1 <-    summary_data_change_Firmicutes_relative_abundance1 %>% 
+        group_by(Hormone) %>%
+            summarize(
+              mean_change_Firmicutes = mean(change_Firmicutes, na.rm = TRUE),
+              sd_change_Firmicutes = sd(change_Firmicutes, na.rm = TRUE),
+              se_change_Firmicutes = sd_change_Firmicutes / sqrt(n()),  
+              ymin = mean_change_Firmicutes - se_change_Firmicutes,
+              ymax = mean_change_Firmicutes + se_change_Firmicutes
+            ) %>% 
+            ungroup()
+
+# plotting
+ggplot(data = summary_data_change_Firmicutes_relative_abundance1, aes(x = Hormone,
+               y = mean_change_Firmicutes,
+               fill = Hormone)) +
+  geom_bar(stat = "identity") +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.5) + # solid black line at 0
+  geom_errorbar(aes(ymin=ymin, ymax=ymax), width=.2,
+                 position=position_dodge(.9)) + 
+  labs(title = "Change in Firmicutes \nRelative Abundance \nAcross Hormone Groups",
+           x = "Hormone Group", y = "Change in Firmicutes Relative Abundance") + hormone_fill_colors
+```
+
+Though its a bit of an outdated metric, we can also quantify the B:F ratio:
+```{r Bacteroidetes to Firmicutes ratio 1, fig.width = 5}
+# Merge the relative abundance DFs and add a column for the ratio
+FB_ratio <-Firmicutes_relative_abundance %>% 
+right_join(Bacteroidetes_relative_abundance  %>% # merging
+             select(Sample, Bacteroidetes), by = "Sample") %>% # avoiding repeat columns from the merge
+                mutate(FB_ratio = Firmicutes/Bacteroidetes) # adding the ratio column
+
+FB_ratio %>%
+  ggplot(aes(x = Day, 
+             y = FB_ratio, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors +
+  facet_wrap(~Hormone) + labs(title = "F:B Ratio Longitudinally \nAcross Hormone Groups",
+           x = "Day", y = "F:B Ratio")
+```
+Those have some massive error bars on the baseline days!
+
+```{r Bacteroidetes to Firmicutes ratio 2}
+# plotting a bar graph version
+# summary stats for each hormone at each day 
+    FB_ratio_summary_stats <- FB_ratio %>%
+      group_by(Hormone, Day) %>%
+      summarize(
+        mean_FB_ratio = mean(FB_ratio, na.rm = TRUE),
+        sd_FB_ratio = sd(FB_ratio, na.rm = TRUE),
+        se_FB_ratio = sd_FB_ratio / sqrt(n()),  
+        ymin = mean_FB_ratio - se_FB_ratio,
+        ymax = mean_FB_ratio + se_FB_ratio
+      ) %>% 
+      ungroup()
+    
+FB_ratio_summary_stats %>% 
+  filter(Day == "D-3" | Day == "D8") %>% 
+    ggplot(aes(x = Day,
+               y = mean_FB_ratio,
+               fill = Hormone,
+               alpha = Day)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin=ymin, ymax=ymax), width=.2,
+                 position=position_dodge(.9)) + hormone_fill_colors +
+  facet_wrap(~Hormone) + labs(title = "F:B Ratio Baseline to Endpoint \nAcross Hormone Groups",
+           x = "Day", y = "F:B Ratio") + scale_alpha_manual(values = c("D-3" = 0.5, "D8" = 1))
+
+# same with D5 as endpoint
+FB_ratio_summary_stats %>% 
+  filter(Day == "D-3" | Day == "D5") %>% 
+    ggplot(aes(x = Day,
+               y = mean_FB_ratio,
+               fill = Hormone,
+               alpha = Day)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin=ymin, ymax=ymax), width=.2,
+                 position=position_dodge(.9)) + hormone_fill_colors +
+  facet_wrap(~Hormone) + labs(title = "F:B Ratio Baseline to Endpoint \nAcross Hormone Groups",
+           x = "Day", y = "F:B Ratio") + scale_alpha_manual(values = c("D-3" = 0.5, "D5" = 1))
+```
+
+Stats testing is hidden from this html output, but these are the key results:
+
+- No paired t-tests are significant for differences in Bacteroidetes relative abundance at D-3 and D8 for any of the hormone groups 
+
+- No paired t-tests are significant for differences in Bacteroidetes relative abundance at D-3 and D5 for any of the hormone groups, but for PL mice, it is approaching significance (p = 0.098)
+
+```{r FB ratio relative abundance stats testing 1, include = FALSE}
+# I want to see if the bar plots significantly differ!
+
+# Day -3 to Day 8 SALINE
+FB_rel_abun_ttest_data_saline <- FB_ratio %>% 
+      filter(Day == "D-3" | Day == "D8") %>% filter(Hormone == "Saline")
+
+# Fixing the order to do a paired t-test
+FB_rel_abun_ttest_data_saline <- FB_rel_abun_ttest_data_saline %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+FB_rel_abun_ttest_result_saline_1 <- t.test(FB_ratio ~ TimePoint, data = FB_rel_abun_ttest_data_saline, paired = T) 
+
+print(FB_rel_abun_ttest_result_saline_1) # p = 0.38 not signif
+
+# Day -3 to Day 8 PGH
+FB_rel_abun_ttest_data_pgh <- FB_ratio %>% 
+      filter(Day == "D-3" | Day == "D8") %>% filter(Hormone == "PGH")
+
+# Fixing the order to do a paired t-test
+FB_rel_abun_ttest_data_pgh <- FB_rel_abun_ttest_data_pgh %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+FB_rel_abun_ttest_result_pgh_1 <- t.test(FB_ratio ~ TimePoint, data = FB_rel_abun_ttest_data_pgh, paired = T) 
+
+print(FB_rel_abun_ttest_result_pgh_1) # p = 0.43 not signif
+
+# Day -3 to Day 8 PL
+FB_rel_abun_ttest_data_pl <- FB_ratio %>% 
+      filter(Day == "D-3" | Day == "D8") %>% filter(Hormone == "PL")
+
+# Fixing the order to do a paired t-test
+FB_rel_abun_ttest_data_pl <- FB_rel_abun_ttest_data_pl %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+FB_rel_abun_ttest_result_pl_1 <- t.test(FB_ratio ~ TimePoint, data = FB_rel_abun_ttest_data_pl, paired = T) 
+
+print(FB_rel_abun_ttest_result_pl_1) # p = 0.186 not signif
+
+# Day -3 to Day 5 SALINE
+FB_rel_abun_ttest_data_saline_2 <- FB_ratio %>% 
+      filter(Day == "D-3" | Day == "D5") %>% filter(Hormone == "Saline")
+
+# Fixing the order to do a paired t-test
+FB_rel_abun_ttest_data_saline_2 <- FB_rel_abun_ttest_data_saline_2 %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+FB_rel_abun_ttest_result_saline_2 <- t.test(FB_ratio ~ TimePoint, data = FB_rel_abun_ttest_data_saline_2, paired = T) 
+
+print(FB_rel_abun_ttest_result_saline_2) # p = 0.44 not signif
+
+# Day -3 to Day 5 PGH
+FB_rel_abun_ttest_data_pgh_2 <- FB_ratio %>% 
+      filter(Day == "D-3" | Day == "D5") %>% filter(Hormone == "PGH")
+
+# Fixing the order to do a paired t-test
+FB_rel_abun_ttest_data_pgh_2 <- FB_rel_abun_ttest_data_pgh_2 %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+FB_rel_abun_ttest_result_pgh_2 <- t.test(FB_ratio ~ TimePoint, data = FB_rel_abun_ttest_data_pgh_2, paired = T) 
+
+print(FB_rel_abun_ttest_result_pgh_2) # p = 0.34 not signif
+
+# Day -3 to Day 5 PL
+FB_rel_abun_ttest_data_pl_2 <- FB_ratio %>% 
+      filter(Day == "D-3" | Day == "D5") %>% filter(Hormone == "PL")
+
+# Fixing the order to do a paired t-test
+FB_rel_abun_ttest_data_pl_2 <- FB_rel_abun_ttest_data_pl_2 %>%
+  arrange(Mouse_Num, Day)
+
+# PAIRED t-test
+FB_rel_abun_ttest_data_pl_2 <- t.test(FB_ratio ~ TimePoint, data = FB_rel_abun_ttest_data_pl_2, paired = T) 
+
+print(FB_rel_abun_ttest_data_pl_2) # p = 0.098
+
+```
+
+To increase my sample size, I'm going to combine D-3 and D0 into baseline and have D3 and beyond as intervention:
+```{r Bacteroidetes to Firmicutes ratio 3, fig.width = 6}
+
+# filtering and summary stats
+FB_ratio_2 <- FB_ratio %>%
+  mutate(TimePoint = ifelse(Day == "D0", "Baseline", TimePoint))
+
+ FB_ratio_summary_stats_2 <- FB_ratio_2 %>%
+      group_by(Hormone, TimePoint) %>%
+      summarize(
+        mean_FB_ratio = mean(FB_ratio, na.rm = TRUE),
+        sd_FB_ratio = sd(FB_ratio, na.rm = TRUE),
+        se_FB_ratio = sd_FB_ratio / sqrt(n()),  
+        ymin = mean_FB_ratio - se_FB_ratio,
+        ymax = mean_FB_ratio + se_FB_ratio
+      ) %>% 
+      ungroup()
+ 
+ # plotting
+ FB_ratio_summary_stats_2 %>% 
+    ggplot(aes(x = TimePoint,
+               y = mean_FB_ratio,
+               fill = Hormone,
+               alpha = TimePoint)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin=ymin, ymax=ymax), width=.2,
+                 position=position_dodge(.9)) + hormone_fill_colors +
+   facet_wrap(~Hormone) + 
+   labs(title = "F:B Ratio Baseline vs Intervention \nAcross Hormone Groups",
+           x = "Day", y = "F:B Ratio") + 
+   scale_alpha_manual(values = c("Baseline" = 0.5, "Intervention" = 1))
+```
+
+Stats testing is hidden from this html output, but interestingly, it seems that because the baseline error bars are so high, there is no significant difference between baseline and intervention for F:B ratio for any of the hormone groups. Potentially also because these had to be done as unpaired rather than as paired t-tests, reducing our power.  
+
+```{r FB ratio relative abundance stats testing 2, include = FALSE}
+# I want to see if the bar plots significantly differ!
+
+# Day -3 to Day 8 SALINE
+FB_rel_abun_ttest_data_saline_b2e <- FB_ratio_2 %>% 
+      filter(Hormone == "Saline")
+
+# We will do these as unpaired t-tests
+# UNPAIRED t-test
+FB_rel_abun_ttest_result_saline_b2e <- t.test(FB_ratio ~ TimePoint, data = FB_rel_abun_ttest_data_saline_b2e, paired = F) 
+
+print(FB_rel_abun_ttest_result_saline_b2e) # p = 0.386 not signif
+
+# Day -3 to Day 8 PGH
+FB_rel_abun_ttest_data_pgh_b2e <- FB_ratio_2 %>% 
+      filter(Hormone == "PGH")
+
+# UNPAIRED t-test
+FB_rel_abun_ttest_result_pgh_b2e <- t.test(FB_ratio ~ TimePoint, data = FB_rel_abun_ttest_data_pgh_b2e, paired = F) 
+
+print(FB_rel_abun_ttest_result_pgh_b2e) # p = 0.129 not signif
+
+# Day -3 to Day 8 PL
+FB_rel_abun_ttest_data_pl_b2e <- FB_ratio_2 %>% 
+      filter(Hormone == "PL")
+
+# UNPAIRED t-test
+FB_rel_abun_ttest_result_pl_b2e <- t.test(FB_ratio ~ TimePoint, data = FB_rel_abun_ttest_data_pl_b2e, paired = F) 
+
+print(FB_rel_abun_ttest_result_pl_b2e) # p = 0.139 not signif
+```
+
+## 3.d.ii. Taxa known to change in abundance during murine pregnancy OR in mouse models of metabolic syndrome / GDM
+I decided to look at the following taxonomic groups based on what I'd seen in the literature:
+```{r Manually creating table for taxonomic groups}
+taxonomic_table <- data.frame(
+  Taxon = c("Allobaculum", "Clostridium", "Akkermansia", "Bifidobacterium", "Lactobacillus", "Verrucomicrobia", "Lactobacillales"),
+  Level = c("Genus", "Genus", "Genus", "Genus", "Genus", "Phylum", "Order")
+)
+
+taxonomic_table_plot <- ggtexttable(taxonomic_table, rows = NULL, theme = ttheme("mBlue"))
+taxonomic_table_plot
+```
+
+I'm not going to show every possible plot for each of the above 7 taxa, but I'lll show some highlights for each below: 
+*(complete rel and abs abundance analyses are found in Grace's HEB 114 Lab 2 Draft RMarkdown*
+
+### 1. Allobaculum
+```{r Allobaculum plot 1, fig.width = 5}
+# Relative abundance calculation:
+Allobaculum_relative_abundance <- phylo_nonabx_long %>%
+  filter(Genus == "Allobaculum") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Allobaculum = sum(Relative_abundance)) %>%
+  ungroup()
+
+# Relative abundance plotting:
+Allobaculum_relative_abundance %>%
+  ggplot(aes(x = Day, 
+             y = Allobaculum, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors +
+  facet_wrap(~Hormone) + labs(title = "Allobaculum Longitudinally\n Across Hormone Groups", y = "Allobaculum Relative Abundance")
+```
+
+This might look like a bloom in PL mice, but when we scrutinize more closely, it's likely driven by a single individual (one in PL and one in saline), rather than being a consistent trend:
+```{r Allobaculum plot 2, fig.width = 5}
+
+# Absolute abundance calculation:
+Allobaculum_absolute_abundance <- phylo_nonabx_long %>%
+  filter(Genus == "Allobaculum") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Allobaculum = sum(Abundance)) %>%
+  ungroup()
+
+# Absolute abundance plotting:
+Allobaculum_absolute_abundance %>%
+  ggplot(aes(x = Day, 
+             y = Allobaculum, 
+             color = Hormone, 
+             group = Mouse_Num)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors +
+  facet_wrap(~Hormone) + labs(title = "Allobaculum Longitudinally\n Across Hormone Groups", y = "Allobaculum Absolute Abundance")
+```
+From this plot, I decided that when abundances are predominantly low, it's better to plot each mouse individually to see if blooms are constrained to one individual.
+
+### 2. Clostridia
+
+Seems to bloom in all groups on day 8 (day with likely contamination):
+```{r Clostridia plot 1, fig.width = 5}
+
+# Absolute abundance calculation:
+Clostridium_absolute_abundance <- phylo_nonabx_long %>%
+  filter(Genus == "Clostridium") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Clostridium = sum(Abundance)) %>%
+  ungroup()
+
+# Absolute abundance plotting:
+Clostridium_absolute_abundance %>%
+  ggplot(aes(x = Day, 
+             y = Clostridium, 
+             color = Hormone, 
+             group = Mouse_Num)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors +
+  facet_wrap(~Hormone) + labs(title = "Clostridium Longitudinally\n Across Hormone Groups", y = "Clostridium Absolute Abundance")
+```
+
+
+### 3. Akkermansia
+
+Given the distrust of D8 samples, I'm going to filter them out:
+*(Note: There was one clear crazy outlier mouse, so I filtered it out)*
+```{r Akkermansia plot 1}
+# Relative abundance calculation:
+Akkermansia_relative_abundance <- phylo_nonabx_long %>%
+  filter(Genus == "Akkermansia") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Akkermansia = sum(Relative_abundance)) %>%
+  ungroup()
+
+# Absolute abundance calculation:
+Akkermansia_absolute_abundance <- phylo_nonabx_long %>%
+  filter(Genus == "Akkermansia") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Akkermansia = sum(Abundance)) %>%
+  ungroup()
+
+Akkermansia_relative_abundance %>%
+  filter(Day != "D8") %>% 
+  ggplot(aes(x = Day, 
+             y = Akkermansia, 
+             color = Hormone, 
+             group = Mouse_Num)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7)  +
+  facet_wrap(~Hormone) + ylim(0, 0.02) + hormone_group_colors + 
+  labs(title = "Akkermansia Longitudinally\n Across Hormone Groups", y = "Akkermansia Relative Abundance")
+```
+
+### 4. Bifidobacterium
+```{r Bifidobacterium plot 1}
+# Absolute abundance calculation:
+Bifidobacterium_absolute_abundance <- phylo_nonabx_long %>%
+  filter(Genus == "Bifidobacterium") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Bifidobacterium = sum(Abundance)) %>%
+  ungroup()
+
+Bifidobacterium_absolute_abundance %>%
+  ggplot(aes(x = Day, 
+             y = Bifidobacterium, 
+             color = Hormone, 
+             group = Mouse_Num)) +
+  geom_line(alpha = 0.4) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "line", linewidth = 1.3) +
+  stat_summary(aes(group = Hormone), fun = mean, geom = "point", size = 3) + hormone_group_colors + 
+  labs(title = "Bifidobacterium Longitudinally\n Across Hormone Groups", y = "Bifidobacterium Absolute Abundance")
+
+```
+This also increased across groups on the day of likely contamination
+
+But if you look at relative and absolute abundace without D8, it might be more interesting:
+```{r Bifidobacterium plot 2}
+# calculating rel abundance
+Bifidobacterium_relative_abundance <- phylo_nonabx_long %>%
+  filter(Genus == "Bifidobacterium") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Bifidobacterium = sum(Relative_abundance)) %>%
+  ungroup()
+
+# plotting relative
+Bifidobacterium_relative_abundance %>%
+  filter(Day != "D8") %>% 
+  ggplot(aes(x = Day, 
+             y = Bifidobacterium, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors + 
+  labs(title = "Bifidobacterium Relative Abundance \nLongitudinally Across Hormone Groups", y = "Bifidobacterium Relative Abundance")
+
+# plotting absolute
+Bifidobacterium_absolute_abundance %>%
+  filter(Day != "D8") %>% 
+  ggplot(aes(x = Day, 
+             y = Bifidobacterium, 
+             color = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors + 
+  labs(title = "Bifidobacterium Absolute Abundance \nLongitudinally Across Hormone Groups", y = "Bifidobacterium Absolute Abundance")
+```
+It looks like it might decrease in PGH? But unclear if this is significant at all...
+
+### 5. Lactobacillus
+
+This is another that spikes in absolute abundance on D8 in all groups:
+```{r Lactobacillus plot 1}
+# Absolute abundance calculation:
+Lactobacillus_absolute_abundance <- phylo_nonabx_long %>%
+  filter(Genus == "Lactobacillus") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Lactobacillus = sum(Abundance)) %>%
+  ungroup()
+
+Lactobacillus_absolute_abundance %>%
+  ggplot(aes(x = Day, 
+             y = Lactobacillus, 
+             color = Hormone, 
+             shape = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors + 
+  labs(title = "Lactobacillus Longitudinally\n Across Hormone Groups", y = "Lactobacillus Absolute Abundance")
+```
+
+### 6. Verrucomicrobia
+
+Below I'll show relative abundance both with and without the outlier mouse (just by changing y-axis scale)
+```{r Verrucomicrobia plot 1}
+Verrucomicrobia_relative_abundance <- phylo_nonabx_long %>%
+  filter(Phylum == "Verrucomicrobia") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Verrucomicrobia = sum(Relative_abundance)) %>%
+  ungroup()
+
+Verrucomicrobia_relative_abundance %>%
+  filter(Day != "D8") %>% 
+  ggplot(aes(x = Day, 
+             y = Verrucomicrobia, 
+             color = Hormone, 
+             group = Mouse_Num)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors +
+  facet_wrap(~Hormone) + 
+  labs(title = "Verrucomicrobia Longitudinally\n Across Hormone Groups", y = "Verrucomicrobia Relative Abundance")
+
+# Taking out the outlier by changing scale
+Verrucomicrobia_relative_abundance %>%
+  filter(Day != "D8") %>% 
+  ggplot(aes(x = Day, 
+             y = Verrucomicrobia, 
+             color = Hormone, 
+             group = Mouse_Num)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + ylim(0,0.02) + hormone_group_colors +
+  facet_wrap(~Hormone) + 
+  labs(title = "Verrucomicrobia Longitudinally\n Across Hormone Groups \nOutlier Removed", y = "Verrucomicrobia Relative Abundance")
+```
+So this taxa increases in several of the PL individuals (3), although one mouse started with an abnormally high concentration? 
+
+### 7. Lactobacillales
+```{r Lactobacillales plot 1}
+Lactobacillales_relative_abundance <- phylo_nonabx_long %>%
+  filter(Order == "Lactobacillales") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(Lactobacillales = sum(Relative_abundance)) %>%
+  ungroup()
+
+Lactobacillales_relative_abundance %>%
+  filter(Day != "D8") %>% 
+  ggplot(aes(x = Day, 
+             y = Lactobacillales, 
+             color = Hormone, 
+             shape = Hormone, 
+             group = Hormone)) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors +
+  facet_wrap(~Hormone) + 
+  labs(title = "Lactobacillales Longitudinally \nAcross Hormone Groups \nOutlier Removed", y = "Lactobacillales Relative Abundance")
+```
+Seems to have decreased in PL mice, but started from baseline at an abnormally high level. 
+
+## 3.d.iii. Whole Body Taxonomic Composition
+
+I'm going to start by looking at phylum-level taxonomic composition across groups.
+
+Because we saw potential shifts in the F:B ratio of PL mice, let's start at the phylum level: 
+
+```{r community structure phylum level 1, include = FALSE}
+# Plot average sample composition of PL Group over time
+# Compute relative abundance ---------------------------------------------------
+# Step 1: Summing abundance across samples in each group at each timepoint  
+phylo_nonabx_long %>%
+  group_by(Day, Hormone, Phylum) %>%
+  summarize(SumAbundance = sum(Abundance))
+
+# Step 2: Calculate the total abundance of each taxon
+phylo_nonabx_long %>%
+  group_by(Day, Hormone, Phylum) %>%
+  summarize(SumAbundance = sum(Abundance)) %>%
+  group_by(Day, Hormone) %>%
+  mutate(TotalGroupAbundance = sum(SumAbundance))
+
+# Step 3: Calculate the relative abundance of each taxon
+phylo_nonabx_long_rel_ab <- phylo_nonabx_long %>%
+  group_by(Day, Hormone, Phylum) %>%
+  summarize(SumAbundance = sum(Abundance)) %>%
+  group_by(Day, Hormone) %>%
+  mutate(TotalGroupAbundance = sum(SumAbundance)) %>%
+  mutate(RelAbundance = SumAbundance / TotalGroupAbundance)
+```
+
+
+```{r community structure phylum level 2, fig.width = 8}
+# Plot taxonomic composition of each group over time
+phylo_nonabx_long_rel_ab %>%
+  ggplot(aes(x = Day, y = RelAbundance, fill = Phylum)) +
+  stat_summary(geom = "bar", fun = "mean", position = "stack") +
+  facet_wrap(~Hormone) +
+  labs(title = "Phylum-Level Taxonomic Composition \nof Each Hormone Group Over Time", 
+       y = "Relative Abundance of Phyla") +
+  theme(legend.position = "right")
+```
+
+I'll now do the same for the levels of class, order, family, and genus: 
+```{r community structure class level, fig.width = 9}
+phylo_nonabx_long_rel_ab_class <- phylo_nonabx_long %>%
+  group_by(Day, Hormone, Class) %>%
+  summarize(SumAbundance = sum(Abundance)) %>%
+  group_by(Day, Hormone) %>%
+  mutate(TotalGroupAbundance = sum(SumAbundance)) %>%
+  mutate(RelAbundance = SumAbundance / TotalGroupAbundance)
+
+# Plot taxonomic composition of each group over time
+phylo_nonabx_long_rel_ab_class %>%
+  ggplot(aes(x = Day, y = RelAbundance, fill = Class)) +
+  stat_summary(geom = "bar", fun = "mean", position = "stack") +
+  facet_wrap(~Hormone) +
+  labs(title = "Class-Level Taxonomic Composition \nof Each Hormone Group Over Time",
+       y = "Relative Abundance of Classes") +
+  theme(legend.position = "right") 
+
+```
+
+```{r community structure order level, fig.width = 9}
+phylo_nonabx_long_rel_ab_order <- phylo_nonabx_long %>%
+  group_by(Day, Hormone, Order) %>%
+  summarize(SumAbundance = sum(Abundance)) %>%
+  group_by(Day, Hormone) %>%
+  mutate(TotalGroupAbundance = sum(SumAbundance)) %>%
+  mutate(RelAbundance = SumAbundance / TotalGroupAbundance)
+
+# Plot taxonomic composition of each group over time
+phylo_nonabx_long_rel_ab_order %>%
+  ggplot(aes(x = Day, y = RelAbundance, fill = Order)) +
+  stat_summary(geom = "bar", fun = "mean", position = "stack") +
+  facet_wrap(~Hormone) +
+  labs(title = "Order-Level Taxonomic Composition \nof Each Hormone Group Over Time",
+       y = "Relative Abundance of Orders") +
+  theme(legend.position = "right") 
+```
+
+```{r community structure family level, fig.width = 12}
+phylo_nonabx_long_rel_ab_fam <- phylo_nonabx_long %>%
+  group_by(Day, Hormone, Family) %>%
+  summarize(SumAbundance = sum(Abundance)) %>%
+  group_by(Day, Hormone) %>%
+  mutate(TotalGroupAbundance = sum(SumAbundance)) %>%
+  mutate(RelAbundance = SumAbundance / TotalGroupAbundance)
+
+# Plot taxonomic composition of each group over time
+phylo_nonabx_long_rel_ab_fam %>%
+  ggplot(aes(x = Day, y = RelAbundance, fill = Family)) +
+  stat_summary(geom = "bar", fun = "mean", position = "stack") +
+  facet_wrap(~Hormone) +
+  labs(title = "Family-Level Taxonomic Composition \nof Each Hormone Group Over Time",
+        y = "Relative Abundance of Families") +
+  theme(legend.position = "right") 
+
+```
+
+```{r community structure genus level, fig.width = 15}
+phylo_nonabx_long_rel_ab_genus <- phylo_nonabx_long %>%
+  filter(Genus != "Other") %>% # removing the "Others"
+  group_by(Day, Hormone, Genus) %>%
+  summarize(SumAbundance = sum(Abundance)) %>%
+  group_by(Day, Hormone) %>%
+  mutate(TotalGroupAbundance = sum(SumAbundance)) %>%
+  mutate(RelAbundance = SumAbundance / TotalGroupAbundance)
+
+# Plot taxonomic composition of each group over time
+phylo_nonabx_long_rel_ab_genus %>%
+  ggplot(aes(x = Day, y = RelAbundance, fill = Genus)) +
+  stat_summary(geom = "bar", fun = "mean", position = "stack") +
+  facet_wrap(~Hormone) +
+  labs(title = "Genus-Level Taxonomic Composition \nof Each Hormone Group Over Time",
+       y = "Relative Abundance of Genera") +
+  theme(legend.position = "right") 
+
+```
+  
