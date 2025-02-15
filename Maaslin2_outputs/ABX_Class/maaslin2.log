@@ -1,0 +1,89 @@
+2024-12-02 14:51:38.974972 INFO::Writing function arguments to log file
+2024-12-02 14:51:38.975437 DEBUG::Function arguments
+2024-12-02 14:51:38.975579 DEBUG::Output folder: ABX_Class
+2024-12-02 14:51:38.975705 DEBUG::Min Abundance: 0.000000
+2024-12-02 14:51:38.975822 DEBUG::Min Prevalence: 0.100000
+2024-12-02 14:51:38.975936 DEBUG::Normalization: TSS
+2024-12-02 14:51:38.976046 DEBUG::Transform: LOG
+2024-12-02 14:51:38.976161 DEBUG::Analysis method: LM
+2024-12-02 14:51:38.976283 DEBUG::Max significance: 0.250000
+2024-12-02 14:51:38.976402 DEBUG::Random effects: Mouse_ID,Day
+2024-12-02 14:51:38.976515 DEBUG::Fixed effects: Antibiotics
+2024-12-02 14:51:38.976629 DEBUG::Correction method: BH
+2024-12-02 14:51:38.976746 DEBUG::Standardize: TRUE
+2024-12-02 14:51:38.976858 DEBUG::Cores: 1
+2024-12-02 14:51:38.976964 INFO::Verifying options selected are valid
+2024-12-02 14:51:38.977313 INFO::Determining format of input files
+2024-12-02 14:51:38.977627 INFO::Input format is data samples as rows and metadata samples as rows
+2024-12-02 14:51:38.978123 DEBUG::The following samples were found to have features but no metadata. They will be removed. HEB24001,HEB24002,HEB24003,HEB24004,HEB24005,HEB24006,HEB24007,HEB24008,HEB24010,HEB24011,HEB24013,HEB24014,HEB24015,HEB24016,HEB24017,HEB24018,HEB24019,HEB24021,HEB24022,HEB24023,HEB24024,HEB24025,HEB24026,HEB24034,HEB24036,HEB24037,HEB24038,HEB24039,HEB24040,HEB24042,HEB24043,HEB24044,HEB24047,HEB24048,HEB24049,HEB24050,HEB24051,HEB24052,HEB24053,HEB24054,HEB24058,HEB24059,HEB24060,HEB24061,HEB24062,HEB24063,HEB24065,HEB24066,HEB24067,HEB24069,HEB24070,HEB24075,HEB24076,HEB24077,HEB24078,HEB24079,HEB24080,HEB24081,HEB24083,HEB24085,HEB24086,HEB24087,HEB24088,HEB24090,HEB24092,HEB24094,HEB24095,HEB24096,HEB24097,HEB24098,HEB24099,HEB24100,HEB24106,HEB24107,HEB24108,HEB24109,HEB24110,HEB24111,HEB24112,HEB24113,HEB24116,HEB24118,HEB24119,HEB24120,HEB24121,HEB24122,HEB24123,HEB24124,HEB24125,HEB24126,HEB24133,HEB24134,HEB24135,HEB24136,HEB24137,HEB24138,HEB24139,HEB24140,HEB24141,HEB24142,HEB24143,HEB24144,HEB24151,HEB24152,HEB24153,HEB24154,HEB24155,HEB24156,HEB24157,HEB24158,HEB24159,HEB24160,HEB24161,HEB24162,HEB24169,HEB24170,HEB24171,HEB24172,HEB24173,HEB24174,HEB24175,HEB24176,HEB24177,HEB24178,HEB24179,HEB24180,HEB24187,HEB24188,HEB24189,HEB24190,HEB24191,HEB24192,HEB24193,HEB24194,HEB24195,HEB24196,HEB24197,HEB24198
+2024-12-02 14:51:38.978285 DEBUG::A total of 60 samples were found in both the data and metadata
+2024-12-02 14:51:38.978394 DEBUG::Reordering data/metadata to use same sample ordering
+2024-12-02 14:51:38.978756 INFO::Formula for random effects: expr ~ (1 | Mouse_ID) + (1 | Day)
+2024-12-02 14:51:38.979112 INFO::Formula for fixed effects: expr ~  Antibiotics
+2024-12-02 14:51:38.979489 INFO::Filter data based on min abundance and min prevalence
+2024-12-02 14:51:38.979791 INFO::Total samples in data: 60
+2024-12-02 14:51:38.980075 INFO::Min samples required with min abundance for a feature not to be filtered: 6.000000
+2024-12-02 14:51:38.980554 INFO::Total filtered features: 6
+2024-12-02 14:51:38.980858 INFO::Filtered feature names from abundance and prevalence filtering: k__Bacteria.p__Chloroflexi.c__Thermomicrobia, k__Bacteria.p__Spirochaetes.c__Spirochaetes, k__Bacteria.p__Actinobacteria.c__Thermoleophilia, k__Bacteria.p__Verrucomicrobia.__, k__Bacteria.p__Proteobacteria.c__Deltaproteobacteria, k__Bacteria.p__Actinobacteria.__
+2024-12-02 14:51:38.981397 INFO::Total filtered features with variance filtering: 0
+2024-12-02 14:51:38.981696 INFO::Filtered feature names from variance filtering:
+2024-12-02 14:51:38.981981 INFO::Running selected normalization method: TSS
+2024-12-02 14:51:38.982535 INFO::Applying z-score to standardize continuous metadata
+2024-12-02 14:51:38.984058 INFO::Running selected transform method: LOG
+2024-12-02 14:51:38.984623 INFO::Running selected analysis method: LM
+2024-12-02 14:51:38.985299 INFO::Fitting model to feature number 1, k__Bacteria.p__Bacteroidetes.c__Bacteroidia
+2024-12-02 14:51:39.007988 INFO::Fitting model to feature number 2, k__Bacteria.p__Firmicutes.c__Bacilli
+2024-12-02 14:51:39.029259 INFO::Fitting model to feature number 3, k__Bacteria.p__Verrucomicrobia.c__Verrucomicrobiae
+2024-12-02 14:51:39.049974 INFO::Fitting model to feature number 4, k__Bacteria.__.__
+2024-12-02 14:51:39.080005 INFO::Fitting model to feature number 5, k__Bacteria.p__Firmicutes.c__Clostridia
+2024-12-02 14:51:39.11323 INFO::Fitting model to feature number 6, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria
+2024-12-02 14:51:39.134049 INFO::Fitting model to feature number 7, k__Bacteria.p__Cyanobacteria.c__Chloroplast
+2024-12-02 14:51:39.154038 INFO::Fitting model to feature number 8, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria
+2024-12-02 14:51:39.17461 INFO::Fitting model to feature number 9, k__Bacteria.p__Firmicutes.c__Erysipelotrichi
+2024-12-02 14:51:39.195176 INFO::Fitting model to feature number 10, k__Bacteria.p__Actinobacteria.c__Actinobacteria
+2024-12-02 14:51:39.216541 INFO::Fitting model to feature number 11, k__Bacteria.p__Tenericutes.c__Mollicutes
+2024-12-02 14:51:39.237677 INFO::Fitting model to feature number 12, k__Bacteria.p__Firmicutes.__
+2024-12-02 14:51:39.259614 INFO::Fitting model to feature number 13, k__Bacteria.p__Proteobacteria.c__Betaproteobacteria
+2024-12-02 14:51:39.281127 INFO::Fitting model to feature number 14, k__Bacteria.p__Deferribacteres.c__Deferribacteres
+2024-12-02 14:51:39.302074 INFO::Fitting model to feature number 15, Unassigned.__.__
+2024-12-02 14:51:39.322606 INFO::Fitting model to feature number 16, k__Bacteria.p__Bacteroidetes.__
+2024-12-02 14:51:39.343574 INFO::Fitting model to feature number 17, k__Bacteria.p__Actinobacteria.c__Coriobacteriia
+2024-12-02 14:51:39.365304 INFO::Fitting model to feature number 18, k__Archaea.p__Euryarchaeota.c__Halobacteria
+2024-12-02 14:51:39.398828 INFO::Fitting model to feature number 19, k__Bacteria.p__Proteobacteria.c__Epsilonproteobacteria
+2024-12-02 14:51:39.420177 INFO::Fitting model to feature number 20, k__Bacteria.p__Bacteroidetes.c__Flavobacteriia
+2024-12-02 14:51:39.442344 INFO::Fitting model to feature number 21, k__Bacteria.p__.Thermi..c__Deinococci
+2024-12-02 14:51:39.465394 INFO::Counting total values for each feature
+2024-12-02 14:51:39.466584 INFO::Writing filtered data to file ABX_Class/features/filtered_data.tsv
+2024-12-02 14:51:39.468519 INFO::Writing filtered, normalized data to file ABX_Class/features/filtered_data_norm.tsv
+2024-12-02 14:51:39.470401 INFO::Writing filtered, normalized, transformed data to file ABX_Class/features/filtered_data_norm_transformed.tsv
+2024-12-02 14:51:39.474625 WARNING::Deleting existing residuals file: ABX_Class/fits/residuals.rds
+2024-12-02 14:51:39.476059 INFO::Writing residuals to file ABX_Class/fits/residuals.rds
+2024-12-02 14:51:39.477401 WARNING::Deleting existing fitted file: ABX_Class/fits/fitted.rds
+2024-12-02 14:51:39.478085 INFO::Writing fitted values to file ABX_Class/fits/fitted.rds
+2024-12-02 14:51:39.478744 WARNING::Deleting existing ranef file: ABX_Class/fits/ranef.rds
+2024-12-02 14:51:39.479239 INFO::Writing extracted random effects to file ABX_Class/fits/ranef.rds
+2024-12-02 14:51:39.479772 INFO::Writing all results to file (ordered by increasing q-values): ABX_Class/all_results.tsv
+2024-12-02 14:51:39.48054 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): ABX_Class/significant_results.tsv
+2024-12-02 14:51:39.481105 INFO::Writing heatmap of significant results to file: ABX_Class/heatmap.pdf
+2024-12-02 14:51:39.482091 INFO::Writing association plots (one for each significant association) to output folder: ABX_Class
+2024-12-02 14:51:39.482943 INFO::Plotting associations from most to least significant, grouped by metadata
+2024-12-02 14:51:39.483354 INFO::Plotting data for metadata number 1, Antibiotics
+2024-12-02 14:51:39.484012 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Cyanobacteria.c__Chloroplast
+2024-12-02 14:51:39.541567 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria
+2024-12-02 14:51:39.594708 INFO::Creating boxplot for categorical data, Antibiotics vs Unassigned.__.__
+2024-12-02 14:51:39.647151 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.__.__
+2024-12-02 14:51:39.71279 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Actinobacteria.c__Actinobacteria
+2024-12-02 14:51:39.762314 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Bacteroidetes.c__Bacteroidia
+2024-12-02 14:51:39.817884 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Firmicutes.__
+2024-12-02 14:51:39.869192 INFO::Creating boxplot for categorical data, Antibiotics vs k__Archaea.p__Euryarchaeota.c__Halobacteria
+2024-12-02 14:51:39.923014 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Actinobacteria.c__Coriobacteriia
+2024-12-02 14:51:39.98906 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Firmicutes.c__Clostridia
+2024-12-02 14:51:40.041018 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Proteobacteria.c__Betaproteobacteria
+2024-12-02 14:51:40.091166 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria
+2024-12-02 14:51:40.141908 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Tenericutes.c__Mollicutes
+2024-12-02 14:51:40.202426 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Firmicutes.c__Bacilli
+2024-12-02 14:51:40.257729 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Deferribacteres.c__Deferribacteres
+2024-12-02 14:51:40.309628 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Proteobacteria.c__Epsilonproteobacteria
+2024-12-02 14:51:40.360739 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Bacteroidetes.c__Flavobacteriia
+2024-12-02 14:51:40.41105 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__.Thermi..c__Deinococci
+2024-12-02 14:51:40.476034 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Bacteroidetes.__

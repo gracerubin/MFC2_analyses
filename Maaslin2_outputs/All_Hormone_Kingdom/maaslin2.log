@@ -1,0 +1,46 @@
+2024-12-02 10:02:22.313413 INFO::Writing function arguments to log file
+2024-12-02 10:02:22.321124 DEBUG::Function arguments
+2024-12-02 10:02:22.32192 DEBUG::Output folder: All_Hormone_Kingdom
+2024-12-02 10:02:22.322283 DEBUG::Min Abundance: 0.000000
+2024-12-02 10:02:22.3226 DEBUG::Min Prevalence: 0.100000
+2024-12-02 10:02:22.323125 DEBUG::Normalization: TSS
+2024-12-02 10:02:22.324233 DEBUG::Transform: LOG
+2024-12-02 10:02:22.324992 DEBUG::Analysis method: LM
+2024-12-02 10:02:22.325387 DEBUG::Max significance: 0.250000
+2024-12-02 10:02:22.325895 DEBUG::Random effects: Mouse_ID,Day
+2024-12-02 10:02:22.326233 DEBUG::Fixed effects: Hormone
+2024-12-02 10:02:22.326524 DEBUG::Correction method: BH
+2024-12-02 10:02:22.326971 DEBUG::Standardize: TRUE
+2024-12-02 10:02:22.327456 DEBUG::Cores: 1
+2024-12-02 10:02:22.327747 INFO::Verifying options selected are valid
+2024-12-02 10:02:22.329439 INFO::Determining format of input files
+2024-12-02 10:02:22.331718 INFO::Input format is data samples as rows and metadata samples as rows
+2024-12-02 10:02:22.333599 DEBUG::The following samples were found to have features but no metadata. They will be removed. HEB24009,HEB24010,HEB24011,HEB24012,HEB24013,HEB24014,HEB24015,HEB24016,HEB24017,HEB24018,HEB24019,HEB24020,HEB24021,HEB24022,HEB24023,HEB24024,HEB24025,HEB24026,HEB24033,HEB24034,HEB24035,HEB24036,HEB24037,HEB24038,HEB24039,HEB24040,HEB24041,HEB24042,HEB24043,HEB24044,HEB24045,HEB24046,HEB24047,HEB24048,HEB24049,HEB24050,HEB24051,HEB24052,HEB24053,HEB24054,HEB24057,HEB24058,HEB24059,HEB24060,HEB24061,HEB24062,HEB24063,HEB24064,HEB24065,HEB24066,HEB24067,HEB24068,HEB24069,HEB24070,HEB24071,HEB24072,HEB24073,HEB24074,HEB24075,HEB24076,HEB24077,HEB24078,HEB24079,HEB24080,HEB24081,HEB24082,HEB24083,HEB24084,HEB24085,HEB24086,HEB24087,HEB24088,HEB24089,HEB24090,HEB24091,HEB24092,HEB24093,HEB24094,HEB24095,HEB24096,HEB24101,HEB24102,HEB24103,HEB24104,HEB24105,HEB24106,HEB24107,HEB24108,HEB24109,HEB24110,HEB24111,HEB24112,HEB24113,HEB24114,HEB24115,HEB24116,HEB24117,HEB24118,HEB24119,HEB24120,HEB24121,HEB24122,HEB24123,HEB24124,HEB24125,HEB24126,HEB24127,HEB24128,HEB24145,HEB24146,HEB24147,HEB24148,HEB24149,HEB24150,HEB24151,HEB24152,HEB24153,HEB24154,HEB24155,HEB24156,HEB24157,HEB24158,HEB24159,HEB24160,HEB24161,HEB24162,HEB24181,HEB24182,HEB24183,HEB24184,HEB24185,HEB24186,HEB24187,HEB24188,HEB24189,HEB24190,HEB24191,HEB24192,HEB24193,HEB24194,HEB24195,HEB24196,HEB24197,HEB24198
+2024-12-02 10:02:22.334015 DEBUG::A total of 54 samples were found in both the data and metadata
+2024-12-02 10:02:22.334483 DEBUG::Reordering data/metadata to use same sample ordering
+2024-12-02 10:02:22.336516 INFO::Formula for random effects: expr ~ (1 | Mouse_ID) + (1 | Day)
+2024-12-02 10:02:22.339552 INFO::Formula for fixed effects: expr ~  Hormone
+2024-12-02 10:02:22.344141 INFO::Filter data based on min abundance and min prevalence
+2024-12-02 10:02:22.346937 INFO::Total samples in data: 54
+2024-12-02 10:02:22.351144 INFO::Min samples required with min abundance for a feature not to be filtered: 5.400000
+2024-12-02 10:02:22.353534 INFO::Total filtered features: 1
+2024-12-02 10:02:22.35452 INFO::Filtered feature names from abundance and prevalence filtering: k__Archaea
+2024-12-02 10:02:22.356059 INFO::Total filtered features with variance filtering: 0
+2024-12-02 10:02:22.35667 INFO::Filtered feature names from variance filtering:
+2024-12-02 10:02:22.357244 INFO::Running selected normalization method: TSS
+2024-12-02 10:02:22.359696 INFO::Applying z-score to standardize continuous metadata
+2024-12-02 10:02:22.374906 INFO::Running selected transform method: LOG
+2024-12-02 10:02:22.376914 INFO::Running selected analysis method: LM
+2024-12-02 10:02:22.380316 INFO::Fitting model to feature number 1, k__Bacteria
+2024-12-02 10:02:22.50685 INFO::Fitting model to feature number 2, Unassigned
+2024-12-02 10:02:22.612905 INFO::Counting total values for each feature
+2024-12-02 10:02:22.648355 INFO::Writing filtered data to file All_Hormone_Kingdom/features/filtered_data.tsv
+2024-12-02 10:02:22.657066 INFO::Writing filtered, normalized data to file All_Hormone_Kingdom/features/filtered_data_norm.tsv
+2024-12-02 10:02:22.665331 INFO::Writing filtered, normalized, transformed data to file All_Hormone_Kingdom/features/filtered_data_norm_transformed.tsv
+2024-12-02 10:02:22.669818 INFO::Writing residuals to file All_Hormone_Kingdom/fits/residuals.rds
+2024-12-02 10:02:22.671686 INFO::Writing fitted values to file All_Hormone_Kingdom/fits/fitted.rds
+2024-12-02 10:02:22.672666 INFO::Writing extracted random effects to file All_Hormone_Kingdom/fits/ranef.rds
+2024-12-02 10:02:22.674304 INFO::Writing all results to file (ordered by increasing q-values): All_Hormone_Kingdom/all_results.tsv
+2024-12-02 10:02:22.677429 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): All_Hormone_Kingdom/significant_results.tsv
+2024-12-02 10:02:22.678394 INFO::Writing heatmap of significant results to file: All_Hormone_Kingdom/heatmap.pdf
+2024-12-02 10:02:22.681469 INFO::Writing association plots (one for each significant association) to output folder: All_Hormone_Kingdom
