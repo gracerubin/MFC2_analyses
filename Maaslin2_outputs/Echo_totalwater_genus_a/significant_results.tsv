@@ -1,0 +1,9 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Lachnospiraceae.__	Total_water_percentage	Total_water_percentage	-0.350340384594493	0.0883560717969572	36	36	0.000359705124744362	0.0284167048548046
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__SMB53	Total_water_percentage	Total_water_percentage	1.03849392929735	0.313568284308139	36	36	0.00226666357287304	0.0895332111284851
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__	Total_water_percentage	Total_water_percentage	0.837655989446424	0.304938585567339	36	36	0.00960092122151376	0.231845527248972
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Lachnospiraceae.g__Epulopiscium	Total_water_percentage	Total_water_percentage	-0.476303159100839	0.182565274317567	36	36	0.0134062675232547	0.231845527248972
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Lachnospiraceae.g__Blautia	Total_water_percentage	Total_water_percentage	-0.275704315378889	0.110195419904665	36	36	0.017608521056884	0.231845527248972
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__.Mogibacteriaceae..g__	Total_water_percentage	Total_water_percentage	0.188188910501672	0.07318015798549	36	36	0.0151966777813088	0.231845527248972
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__.g__	Total_water_percentage	Total_water_percentage	-0.425272713064394	0.180080576975794	36	36	0.0248374865438722	0.245270179620738
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Eubacteriaceae.g__Pseudoramibacter_Eubacterium	Total_water_percentage	Total_water_percentage	0.414229953603574	0.175791108996763	36	36	0.0243572317880767	0.245270179620738

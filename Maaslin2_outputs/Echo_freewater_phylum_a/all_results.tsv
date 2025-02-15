@@ -1,0 +1,11 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Proteobacteria	Free_water_percentage	Free_water_percentage	-0.10359533519024	0.0384893517746407	36	36	0.0109530658198281	0.109530658198281
+k__Bacteria.p__Firmicutes	Free_water_percentage	Free_water_percentage	-0.0438996235864788	0.042504138723776	36	36	0.308973718576723	0.772434296441807
+k__Bacteria.p__Cyanobacteria	Free_water_percentage	Free_water_percentage	-0.0456857986750413	0.0382044651403162	36	36	0.240039017174649	0.772434296441807
+k__Bacteria.p__Actinobacteria	Free_water_percentage	Free_water_percentage	-0.0602943855080084	0.054790598764811	36	36	0.279674981512512	0.772434296441807
+k__Bacteria.p__Bacteroidetes	Free_water_percentage	Free_water_percentage	0.105518601174836	0.126471876309193	36	36	0.409921989655964	0.772863954226637
+k__Bacteria.p__Deferribacteres	Free_water_percentage	Free_water_percentage	-0.0648833784881612	0.0875495878750953	36	36	0.463718372535982	0.772863954226637
+k__Bacteria.__	Free_water_percentage	Free_water_percentage	-0.0372076665642213	0.0772141165054739	36	36	0.633030682172336	0.79128835271542
+k__Bacteria.p__Tenericutes	Free_water_percentage	Free_water_percentage	0.0782003177978262	0.146861845264087	36	36	0.597860455123931	0.79128835271542
+k__Bacteria.p__Verrucomicrobia	Free_water_percentage	Free_water_percentage	0.00300756230101434	0.198003151365817	36	36	0.988005409467228	0.988005409467228
+Unassigned.__	Free_water_percentage	Free_water_percentage	-0.018768936088415	0.15314328619375	36	18	0.90317868440517	0.988005409467228

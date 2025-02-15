@@ -1,0 +1,6 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales.f__Alcaligenaceae.g__Sutterella	Free_water_percentage	Free_water_percentage	-0.233823122073907	0.0655456433725453	36	36	0.00109746671162053	0.0866998702180218
+k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Enterobacteriales.f__Enterobacteriaceae.g__	Free_water_percentage	Free_water_percentage	-0.122107980949529	0.0395851539559568	36	36	0.00403129613225443	0.106157464816033
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__.Mogibacteriaceae..g__	Free_water_percentage	Free_water_percentage	0.219405002997408	0.0678083729228203	36	36	0.00270447066069819	0.106157464816033
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Lachnospiraceae.g__Epulopiscium	Free_water_percentage	Free_water_percentage	-0.467984886970272	0.167121517847872	36	36	0.00835967004480005	0.165103483384801
+k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pseudomonadales.f__Moraxellaceae.g__Acinetobacter	Free_water_percentage	Free_water_percentage	-0.136056617584997	0.0525567001897113	36	36	0.0144046445623083	0.227593384084471
