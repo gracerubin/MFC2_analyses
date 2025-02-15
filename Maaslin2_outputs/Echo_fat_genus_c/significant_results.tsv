@@ -1,0 +1,3 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Bacteroidetes.__.__.__.__	Fat_percentage	Fat_percentage	0.598466435587607	0.165489235541832	36	21	0.000957493809818071	0.0378210054878138
+k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales.f__Pasteurellaceae.g__Gallibacterium	Fat_percentage	Fat_percentage	0.380365105558291	0.104630609340979	36	6	0.000924916731322607	0.0378210054878138
