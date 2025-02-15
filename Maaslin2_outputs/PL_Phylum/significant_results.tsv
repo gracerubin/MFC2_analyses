@@ -1,0 +1,3 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Bacteroidetes	TimePoint	Intervention	0.748508846172863	0.233150881550355	24	24	0.00513138577850379	0.0513138577850379
+k__Bacteria.p__Firmicutes	TimePoint	Intervention	-0.275313642850351	0.114922506754435	24	24	0.0255339205262544	0.127669602631272

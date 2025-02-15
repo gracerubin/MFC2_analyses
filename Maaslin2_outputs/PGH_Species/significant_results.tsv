@@ -1,0 +1,3 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Tenericutes.c__Mollicutes.o__RF39.f__.g__.s__	TimePoint	Intervention	1.34657269055218	0.302340985371613	24	24	0.00034855261833366	0.0313697356500294
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Peptococcaceae.g__rc4.4.s__	TimePoint	Intervention	-0.423725910818146	0.122446065187271	24	24	0.002225026461356	0.10012619076102
