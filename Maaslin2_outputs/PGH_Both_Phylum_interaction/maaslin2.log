@@ -1,0 +1,93 @@
+2024-12-02 10:22:58.552078 INFO::Writing function arguments to log file
+2024-12-02 10:22:58.5674 DEBUG::Function arguments
+2024-12-02 10:22:58.56984 DEBUG::Output folder: PGH_Both_Phylum_interaction
+2024-12-02 10:22:58.570713 DEBUG::Min Abundance: 0.000000
+2024-12-02 10:22:58.571408 DEBUG::Min Prevalence: 0.100000
+2024-12-02 10:22:58.573126 DEBUG::Normalization: TSS
+2024-12-02 10:22:58.574233 DEBUG::Transform: LOG
+2024-12-02 10:22:58.574987 DEBUG::Analysis method: LM
+2024-12-02 10:22:58.575806 DEBUG::Max significance: 0.250000
+2024-12-02 10:22:58.577488 DEBUG::Random effects: Mouse_ID
+2024-12-02 10:22:58.580907 DEBUG::Fixed effects: Day_Num,Antibiotics,Day_Num:Antibiotics
+2024-12-02 10:22:58.581567 DEBUG::Correction method: BH
+2024-12-02 10:22:58.582168 DEBUG::Standardize: TRUE
+2024-12-02 10:22:58.582928 DEBUG::Cores: 1
+2024-12-02 10:22:58.583499 INFO::Verifying options selected are valid
+2024-12-02 10:22:58.585196 INFO::Determining format of input files
+2024-12-02 10:22:58.586281 INFO::Input format is data samples as rows and metadata samples as rows
+2024-12-02 10:22:58.588411 DEBUG::The following samples were found to have features but no metadata. They will be removed. HEB24007,HEB24008,HEB24009,HEB24010,HEB24012,HEB24014,HEB24015,HEB24017,HEB24018,HEB24020,HEB24021,HEB24022,HEB24027,HEB24028,HEB24029,HEB24030,HEB24031,HEB24032,HEB24033,HEB24035,HEB24038,HEB24039,HEB24040,HEB24041,HEB24042,HEB24043,HEB24045,HEB24046,HEB24048,HEB24049,HEB24050,HEB24051,HEB24052,HEB24053,HEB24054,HEB24055,HEB24056,HEB24057,HEB24058,HEB24061,HEB24062,HEB24064,HEB24065,HEB24067,HEB24068,HEB24069,HEB24070,HEB24071,HEB24072,HEB24073,HEB24074,HEB24082,HEB24083,HEB24084,HEB24086,HEB24087,HEB24088,HEB24089,HEB24090,HEB24091,HEB24093,HEB24094,HEB24095,HEB24097,HEB24098,HEB24099,HEB24100,HEB24101,HEB24102,HEB24103,HEB24104,HEB24105,HEB24107,HEB24109,HEB24111,HEB24112,HEB24114,HEB24115,HEB24117,HEB24120,HEB24121,HEB24123,HEB24124,HEB24126,HEB24127,HEB24128,HEB24129,HEB24130,HEB24131,HEB24132,HEB24139,HEB24140,HEB24141,HEB24142,HEB24143,HEB24144,HEB24145,HEB24146,HEB24147,HEB24148,HEB24149,HEB24150,HEB24157,HEB24158,HEB24159,HEB24160,HEB24161,HEB24162,HEB24163,HEB24164,HEB24165,HEB24166,HEB24167,HEB24168,HEB24175,HEB24176,HEB24177,HEB24178,HEB24179,HEB24180,HEB24181,HEB24182,HEB24183,HEB24184,HEB24185,HEB24186,HEB24193,HEB24194,HEB24195,HEB24196,HEB24197,HEB24198
+2024-12-02 10:22:58.589954 DEBUG::A total of 66 samples were found in both the data and metadata
+2024-12-02 10:22:58.590392 DEBUG::Reordering data/metadata to use same sample ordering
+2024-12-02 10:22:58.591996 WARNING::Feature name not found in metadata so not applied to formula as fixed effect: Day_Num:Antibiotics
+2024-12-02 10:22:58.600547 INFO::Formula for random effects: expr ~ (1 | Mouse_ID)
+2024-12-02 10:22:58.610694 INFO::Formula for fixed effects: expr ~  Day_Num + Antibiotics
+2024-12-02 10:22:58.612892 INFO::Filter data based on min abundance and min prevalence
+2024-12-02 10:22:58.614666 INFO::Total samples in data: 66
+2024-12-02 10:22:58.615951 INFO::Min samples required with min abundance for a feature not to be filtered: 6.600000
+2024-12-02 10:22:58.618023 INFO::Total filtered features: 2
+2024-12-02 10:22:58.619052 INFO::Filtered feature names from abundance and prevalence filtering: k__Bacteria.p__Chloroflexi, k__Bacteria.p__Spirochaetes
+2024-12-02 10:22:58.621911 INFO::Total filtered features with variance filtering: 0
+2024-12-02 10:22:58.622686 INFO::Filtered feature names from variance filtering:
+2024-12-02 10:22:58.623334 INFO::Running selected normalization method: TSS
+2024-12-02 10:22:58.625779 INFO::Applying z-score to standardize continuous metadata
+2024-12-02 10:22:58.639477 INFO::Running selected transform method: LOG
+2024-12-02 10:22:58.64111 INFO::Running selected analysis method: LM
+2024-12-02 10:22:58.644301 INFO::Fitting model to feature number 1, k__Bacteria.p__Bacteroidetes
+2024-12-02 10:22:58.726307 INFO::Fitting model to feature number 2, k__Bacteria.p__Firmicutes
+2024-12-02 10:22:58.760353 INFO::Fitting model to feature number 3, k__Bacteria.p__Verrucomicrobia
+2024-12-02 10:22:58.801122 INFO::Fitting model to feature number 4, k__Bacteria.__
+2024-12-02 10:22:58.836447 INFO::Fitting model to feature number 5, k__Bacteria.p__Proteobacteria
+2024-12-02 10:22:58.867188 INFO::Fitting model to feature number 6, k__Bacteria.p__Cyanobacteria
+2024-12-02 10:22:58.901157 INFO::Fitting model to feature number 7, k__Bacteria.p__Actinobacteria
+2024-12-02 10:22:58.926892 INFO::Fitting model to feature number 8, k__Bacteria.p__Tenericutes
+2024-12-02 10:22:58.956591 INFO::Fitting model to feature number 9, k__Bacteria.p__Deferribacteres
+2024-12-02 10:22:58.981935 INFO::Fitting model to feature number 10, Unassigned.__
+2024-12-02 10:22:59.002288 INFO::Fitting model to feature number 11, k__Archaea.p__Euryarchaeota
+2024-12-02 10:22:59.031923 INFO::Fitting model to feature number 12, k__Bacteria.p__.Thermi.
+2024-12-02 10:22:59.072687 INFO::Counting total values for each feature
+2024-12-02 10:22:59.074639 INFO::Writing filtered data to file PGH_Both_Phylum_interaction/features/filtered_data.tsv
+2024-12-02 10:22:59.075988 INFO::Writing filtered, normalized data to file PGH_Both_Phylum_interaction/features/filtered_data_norm.tsv
+2024-12-02 10:22:59.077677 INFO::Writing filtered, normalized, transformed data to file PGH_Both_Phylum_interaction/features/filtered_data_norm_transformed.tsv
+2024-12-02 10:22:59.078995 INFO::Writing residuals to file PGH_Both_Phylum_interaction/fits/residuals.rds
+2024-12-02 10:22:59.080828 INFO::Writing fitted values to file PGH_Both_Phylum_interaction/fits/fitted.rds
+2024-12-02 10:22:59.081587 INFO::Writing extracted random effects to file PGH_Both_Phylum_interaction/fits/ranef.rds
+2024-12-02 10:22:59.082191 INFO::Writing all results to file (ordered by increasing q-values): PGH_Both_Phylum_interaction/all_results.tsv
+2024-12-02 10:22:59.083392 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): PGH_Both_Phylum_interaction/significant_results.tsv
+2024-12-02 10:22:59.084156 INFO::Writing heatmap of significant results to file: PGH_Both_Phylum_interaction/heatmap.pdf
+2024-12-02 10:22:59.116732 INFO::Writing association plots (one for each significant association) to output folder: PGH_Both_Phylum_interaction
+2024-12-02 10:22:59.118127 INFO::Plotting associations from most to least significant, grouped by metadata
+2024-12-02 10:22:59.118755 INFO::Plotting data for metadata number 1, Antibiotics
+2024-12-02 10:22:59.121301 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Actinobacteria
+2024-12-02 10:22:59.227591 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.__
+2024-12-02 10:22:59.279311 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Cyanobacteria
+2024-12-02 10:22:59.330571 INFO::Creating boxplot for categorical data, Antibiotics vs Unassigned.__
+2024-12-02 10:22:59.381883 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Proteobacteria
+2024-12-02 10:22:59.442109 INFO::Creating boxplot for categorical data, Antibiotics vs k__Archaea.p__Euryarchaeota
+2024-12-02 10:22:59.536562 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Bacteroidetes
+2024-12-02 10:22:59.591012 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Tenericutes
+2024-12-02 10:22:59.647502 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__.Thermi.
+2024-12-02 10:22:59.69937 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Deferribacteres
+2024-12-02 10:22:59.750582 INFO::Creating boxplot for categorical data, Antibiotics vs k__Bacteria.p__Verrucomicrobia
+2024-12-02 10:23:01.060931 INFO::Plotting data for metadata number 2, Day_Num
+2024-12-02 10:23:01.062209 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.__
+2024-12-02 10:23:01.129788 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.130169 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Actinobacteria
+2024-12-02 10:23:01.201658 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.202028 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Cyanobacteria
+2024-12-02 10:23:01.255537 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.255929 INFO::Creating scatter plot for continuous data, Day_Num vs Unassigned.__
+2024-12-02 10:23:01.330515 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.330977 INFO::Creating scatter plot for continuous data, Day_Num vs k__Archaea.p__Euryarchaeota
+2024-12-02 10:23:01.387515 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.387874 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Proteobacteria
+2024-12-02 10:23:01.445275 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.445639 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Tenericutes
+2024-12-02 10:23:01.514066 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.514438 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Firmicutes
+2024-12-02 10:23:01.567851 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.568195 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Bacteroidetes
+2024-12-02 10:23:01.621893 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.622232 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Deferribacteres
+2024-12-02 10:23:01.675466 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:23:01.67585 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Verrucomicrobia
+2024-12-02 10:23:01.737569 DEBUG::`geom_smooth()` using formula = 'y ~ x'
