@@ -1,0 +1,11 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Verrucomicrobia	Lean_mass_percentage	Lean_mass_percentage	-0.800054483994599	0.244548738359499	36	36	0.00276737489929481	0.0276737489929481
+k__Bacteria.p__Bacteroidetes	Lean_mass_percentage	Lean_mass_percentage	-0.0563296142852251	0.124636328600291	36	36	0.65600276857809	0.776580852243084
+k__Bacteria.p__Firmicutes	Lean_mass_percentage	Lean_mass_percentage	0.0515177505821435	0.0406832740657377	36	36	0.214108492346734	0.776580852243084
+k__Bacteria.__	Lean_mass_percentage	Lean_mass_percentage	0.0731980925299062	0.0819291846424119	36	36	0.380752947606936	0.776580852243084
+k__Bacteria.p__Proteobacteria	Lean_mass_percentage	Lean_mass_percentage	-0.0286294723549745	0.0419587401974093	36	36	0.499658537547524	0.776580852243084
+k__Bacteria.p__Cyanobacteria	Lean_mass_percentage	Lean_mass_percentage	0.017764953338299	0.039387102501504	36	36	0.654892814063063	0.776580852243084
+k__Bacteria.p__Actinobacteria	Lean_mass_percentage	Lean_mass_percentage	-0.0281619138382419	0.0645585189527675	36	36	0.666505242144371	0.776580852243084
+k__Bacteria.p__Deferribacteres	Lean_mass_percentage	Lean_mass_percentage	0.100782276266935	0.0865448569607046	36	36	0.252323895703785	0.776580852243084
+Unassigned.__	Lean_mass_percentage	Lean_mass_percentage	0.0566601611852642	0.145245434995475	36	18	0.698922767018775	0.776580852243084
+k__Bacteria.p__Tenericutes	Lean_mass_percentage	Lean_mass_percentage	-0.0213088691934598	0.148578125327712	36	36	0.887197837233125	0.887197837233125

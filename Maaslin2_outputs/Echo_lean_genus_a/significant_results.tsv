@@ -1,0 +1,4 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__SMB53	Lean_mass_percentage	Lean_mass_percentage	1.15808292274594	0.341773815381671	36	36	0.00180846048382559	0.101111509124011
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Lachnospiraceae.__	Lean_mass_percentage	Lean_mass_percentage	-0.3240726522851	0.0983302005415684	36	36	0.00255978504111421	0.101111509124011
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__	Lean_mass_percentage	Lean_mass_percentage	0.887532565119472	0.317470199223133	36	36	0.00909824128454944	0.239587020493135

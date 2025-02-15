@@ -1,0 +1,58 @@
+2024-12-02 13:13:16.79627 INFO::Writing function arguments to log file
+2024-12-02 13:13:16.799892 DEBUG::Function arguments
+2024-12-02 13:13:16.800342 DEBUG::Output folder: Echo_lean_phylum_a
+2024-12-02 13:13:16.800782 DEBUG::Min Abundance: 0.000000
+2024-12-02 13:13:16.804172 DEBUG::Min Prevalence: 0.100000
+2024-12-02 13:13:16.805788 DEBUG::Normalization: TSS
+2024-12-02 13:13:16.806803 DEBUG::Transform: LOG
+2024-12-02 13:13:16.808085 DEBUG::Analysis method: LM
+2024-12-02 13:13:16.809468 DEBUG::Max significance: 0.250000
+2024-12-02 13:13:16.810376 DEBUG::Random effects: Mouse_ID
+2024-12-02 13:13:16.811505 DEBUG::Fixed effects: Lean_mass_percentage
+2024-12-02 13:13:16.812602 DEBUG::Correction method: BH
+2024-12-02 13:13:16.813306 DEBUG::Standardize: TRUE
+2024-12-02 13:13:16.814112 DEBUG::Cores: 1
+2024-12-02 13:13:16.815148 INFO::Verifying options selected are valid
+2024-12-02 13:13:16.818655 INFO::Determining format of input files
+2024-12-02 13:13:16.821219 INFO::Input format is data samples as rows and metadata samples as rows
+2024-12-02 13:13:16.824881 DEBUG::The following samples were found to have features but no metadata. They will be removed. HEB24001,HEB24002,HEB24003,HEB24004,HEB24005,HEB24006,HEB24007,HEB24008,HEB24009,HEB24010,HEB24011,HEB24012,HEB24013,HEB24014,HEB24015,HEB24016,HEB24018,HEB24019,HEB24020,HEB24021,HEB24022,HEB24024,HEB24026,HEB24027,HEB24028,HEB24029,HEB24030,HEB24031,HEB24032,HEB24033,HEB24034,HEB24035,HEB24036,HEB24038,HEB24039,HEB24043,HEB24046,HEB24047,HEB24048,HEB24049,HEB24050,HEB24051,HEB24052,HEB24053,HEB24054,HEB24059,HEB24060,HEB24061,HEB24062,HEB24063,HEB24064,HEB24065,HEB24066,HEB24067,HEB24069,HEB24070,HEB24071,HEB24072,HEB24073,HEB24074,HEB24075,HEB24076,HEB24077,HEB24078,HEB24079,HEB24080,HEB24081,HEB24082,HEB24083,HEB24084,HEB24085,HEB24086,HEB24087,HEB24091,HEB24092,HEB24093,HEB24094,HEB24095,HEB24096,HEB24097,HEB24098,HEB24099,HEB24100,HEB24101,HEB24102,HEB24103,HEB24104,HEB24105,HEB24107,HEB24108,HEB24109,HEB24110,HEB24111,HEB24112,HEB24113,HEB24114,HEB24115,HEB24116,HEB24117,HEB24118,HEB24119,HEB24120,HEB24121,HEB24123,HEB24124,HEB24125,HEB24126,HEB24128,HEB24145,HEB24146,HEB24147,HEB24148,HEB24149,HEB24150,HEB24151,HEB24152,HEB24153,HEB24154,HEB24155,HEB24156,HEB24157,HEB24158,HEB24159,HEB24160,HEB24161,HEB24162,HEB24163,HEB24164,HEB24165,HEB24166,HEB24167,HEB24168,HEB24169,HEB24170,HEB24171,HEB24172,HEB24173,HEB24174,HEB24175,HEB24176,HEB24177,HEB24178,HEB24179,HEB24180,HEB24181,HEB24182,HEB24183,HEB24184,HEB24185,HEB24186,HEB24187,HEB24188,HEB24189,HEB24190,HEB24191,HEB24192,HEB24193,HEB24194,HEB24195,HEB24196,HEB24197,HEB24198
+2024-12-02 13:13:16.827113 DEBUG::A total of 36 samples were found in both the data and metadata
+2024-12-02 13:13:16.827611 DEBUG::Reordering data/metadata to use same sample ordering
+2024-12-02 13:13:16.829838 INFO::Formula for random effects: expr ~ (1 | Mouse_ID)
+2024-12-02 13:13:16.830859 INFO::Formula for fixed effects: expr ~  Lean_mass_percentage
+2024-12-02 13:13:16.831776 INFO::Filter data based on min abundance and min prevalence
+2024-12-02 13:13:16.832809 INFO::Total samples in data: 36
+2024-12-02 13:13:16.833495 INFO::Min samples required with min abundance for a feature not to be filtered: 3.600000
+2024-12-02 13:13:16.834668 INFO::Total filtered features: 4
+2024-12-02 13:13:16.835697 INFO::Filtered feature names from abundance and prevalence filtering: k__Archaea.p__Euryarchaeota, k__Bacteria.p__Chloroflexi, k__Bacteria.p__Spirochaetes, k__Bacteria.p__.Thermi.
+2024-12-02 13:13:16.83711 INFO::Total filtered features with variance filtering: 0
+2024-12-02 13:13:16.83786 INFO::Filtered feature names from variance filtering:
+2024-12-02 13:13:16.838589 INFO::Running selected normalization method: TSS
+2024-12-02 13:13:16.840196 INFO::Applying z-score to standardize continuous metadata
+2024-12-02 13:13:16.850485 INFO::Running selected transform method: LOG
+2024-12-02 13:13:16.85594 INFO::Running selected analysis method: LM
+2024-12-02 13:13:16.85808 INFO::Fitting model to feature number 1, k__Bacteria.p__Bacteroidetes
+2024-12-02 13:13:16.916383 INFO::Fitting model to feature number 2, k__Bacteria.p__Firmicutes
+2024-12-02 13:13:16.952482 INFO::Fitting model to feature number 3, k__Bacteria.p__Verrucomicrobia
+2024-12-02 13:13:16.979173 INFO::Fitting model to feature number 4, k__Bacteria.__
+2024-12-02 13:13:17.013561 INFO::Fitting model to feature number 5, k__Bacteria.p__Proteobacteria
+2024-12-02 13:13:17.036595 INFO::Fitting model to feature number 6, k__Bacteria.p__Cyanobacteria
+2024-12-02 13:13:17.059632 INFO::Fitting model to feature number 7, k__Bacteria.p__Actinobacteria
+2024-12-02 13:13:17.09651 INFO::Fitting model to feature number 8, k__Bacteria.p__Tenericutes
+2024-12-02 13:13:17.120884 INFO::Fitting model to feature number 9, k__Bacteria.p__Deferribacteres
+2024-12-02 13:13:17.157401 INFO::Fitting model to feature number 10, Unassigned.__
+2024-12-02 13:13:17.194622 INFO::Counting total values for each feature
+2024-12-02 13:13:17.196833 INFO::Writing filtered data to file Echo_lean_phylum_a/features/filtered_data.tsv
+2024-12-02 13:13:17.199071 INFO::Writing filtered, normalized data to file Echo_lean_phylum_a/features/filtered_data_norm.tsv
+2024-12-02 13:13:17.200794 INFO::Writing filtered, normalized, transformed data to file Echo_lean_phylum_a/features/filtered_data_norm_transformed.tsv
+2024-12-02 13:13:17.20259 INFO::Writing residuals to file Echo_lean_phylum_a/fits/residuals.rds
+2024-12-02 13:13:17.20387 INFO::Writing fitted values to file Echo_lean_phylum_a/fits/fitted.rds
+2024-12-02 13:13:17.204495 INFO::Writing extracted random effects to file Echo_lean_phylum_a/fits/ranef.rds
+2024-12-02 13:13:17.205082 INFO::Writing all results to file (ordered by increasing q-values): Echo_lean_phylum_a/all_results.tsv
+2024-12-02 13:13:17.205871 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): Echo_lean_phylum_a/significant_results.tsv
+2024-12-02 13:13:17.206431 INFO::Writing heatmap of significant results to file: Echo_lean_phylum_a/heatmap.pdf
+2024-12-02 13:13:17.207396 INFO::Writing association plots (one for each significant association) to output folder: Echo_lean_phylum_a
+2024-12-02 13:13:17.20857 INFO::Plotting associations from most to least significant, grouped by metadata
+2024-12-02 13:13:17.209063 INFO::Plotting data for metadata number 1, Lean_mass_percentage
+2024-12-02 13:13:17.210407 INFO::Creating scatter plot for continuous data, Lean_mass_percentage vs k__Bacteria.p__Verrucomicrobia
+2024-12-02 13:13:17.341647 DEBUG::`geom_smooth()` using formula = 'y ~ x'

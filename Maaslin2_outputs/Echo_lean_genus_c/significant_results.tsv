@@ -1,0 +1,4 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Verrucomicrobia.c__Verrucomicrobiae.o__Verrucomicrobiales.f__Verrucomicrobiaceae.g__Akkermansia	Lean_mass_percentage	Lean_mass_percentage	-0.800036032705606	0.244550318914655	36	36	0.00276807434756865	0.109338936728962
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__SMB53	Lean_mass_percentage	Lean_mass_percentage	1.15808292080662	0.341773814836608	36	36	0.00180846048480254	0.109338936728962
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__	Lean_mass_percentage	Lean_mass_percentage	0.887532570971745	0.317470203106057	36	36	0.00909824165560082	0.239587030264155
