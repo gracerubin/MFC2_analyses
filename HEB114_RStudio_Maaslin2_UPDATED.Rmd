@@ -1,0 +1,386 @@
+---
+title: 'HEB 114 Maaslin2: Testing for Significant Microbial Associations'
+author: "Emily Venable"
+date: "01-12-2024"
+output:
+  html_document: default
+  pdf_document: default
+---
+Please follow code below to set up R environment and computer for Maaslin2. 
+
+```{r setup}
+#installing potentially redundant packages 
+install.packages('plyr', repos = "http://cran.us.r-project.org")
+install.packages("dplyr")
+library(dplyr)
+
+#installing Maaslin2 in RStudio Verions 4.4 or Greater
+if (!requireNamespace("BiocManager", quietly = TRUE)) 
+            install.packages("BiocManager")
+        BiocManager::install(c("edgeR", "metagenomeSeq")) 
+install.packages("devtools")
+library("devtools")
+install_github("biobakery/Maaslin2")
+
+
+#Creating directory for Maaslin2 Analysis
+#Most importantly, ensure that your working directory has files from Maaslin2 canvas fodlers
+getwd()
+setwd("~/Desktop")
+dir.create("HEB114_Maaslin_Analysis") # Create a new directory
+setwd("HEB114_Maaslin_Analysis") # Change the current working directory 
+getwd() #check if directory has been successfully changed
+#Note: in the morning session, some students were having trouble uploading files from their directory. If you have this problem, in the RStudio bar at the top go to Sessions -> Set Working Directory -> To Source File Location and click. 
+
+#move files on class website to this new directory
+
+#Load MaAsLin 2 package into the R environment
+library(Maaslin2)
+?Maaslin2 #shows information about Maaslin2
+
+```
+
+
+### Maaslin2 Tutorial
+
+- **Part 1: Introduction & Uploading Metadata**
+- **Part 2: Uploading Sequencing Data**
+- **Part 3: Running Maaslin2 Cross-Sectional Analysis**
+- **Part 4: Running Maaslin2 Longitudinal Analysis**
+
+# Part 1: Introduction & Uploading Metadata
+
+This tutorial introduces Maaslin2, a comprehensive R package for identifying significant, multivariable associations between study interventions and microbial meta'omic features (here taxonomic compositions). It provides a way to deal with high-dimensional, zero-inflated data and can handle both cross-sectional and longitudinal study designs. This statistical approach was produced and is maintained by The Huttenhower Lab at the Harvard School of Public Health. 
+
+The core of Maaslin2 is running linear mixed effects models to test for significant microbial associations between treatment groups, overtime, or in-response to an intervention. We will feed "raw count" data (i.e. the number of reads mapping to each microbial taxa across samples), which Maaslin2 will normalize using total-sum scaling TSS and log transforming to make our data appropriate for linear mixed effects models. 
+
+After these models are run, Maslin2 identifies significant associations and generates box plots for significant associations across fixed variables and scatter plots for significant associations across continuous variables. 
+
+Final note before starting: if you plan to include Maaslin2 analysis in your final paper, please cite this paper in your work cited section: Mallick H, Rahnavard A, McIver LJ, Ma S, Zhang Y, Nguyen LH, Tickle TL, Weingart G, Ren B, Schwager EH, Chatterjee S, Thompson KN, Wilkinson JE, Subramanian A, Lu Y, Waldron L, Paulson JN, Franzosa EA, Bravo HC, Huttenhower C (2021). Multivariable Association Discovery in Population-scale Meta-omics Studies. PLoS Computational Biology, 17(11):e1009442.
+
+**Additional Resources:**
+
+- _Huttenhower Lab Description:_ https://huttenhower.sph.harvard.edu/maaslin
+- _Maaslin2 User Manual:_ https://github.com/biobakery/Maaslin2
+- _Maaslin 2.0 Tutorial:_ https://github.com/biobakery/biobakery/wiki/maaslin2#1-installing-r
+
+### 1.1 Uploading Metadata
+
+We will upload metadata for the mouse samples and human samples separately. It is easiest to upload these as data frames so that we can filter samples easier. Please note that while this tutorial only focuses on the mouse samples, you can edit this code to run Maaslin2 on the human samples. 
+
+
+```{r uploading metadata}
+
+df_human_metadata = read.table(file = "HEB114_human_metadata.tsv", header = TRUE, sep = "\t",
+                                row.names = 1,
+                                stringsAsFactors = FALSE)
+
+df_mouse_metadata = read.table(file = "HEB114_mouse_metadata.tsv", header = TRUE, sep = "\t",
+                                row.names = 1,
+                                stringsAsFactors = FALSE)
+
+df_mouse_metadata$Day <- factor(df_mouse_metadata$Day, levels = c("D-5", "D-3", "D0", "D3", "D5", "D8")) #change day to factor
+class(df_mouse_metadata$Day) #check change
+
+```
+
+# Part 2: Uploading Sequencing Data
+
+Now, we will upload the sequencing data that was exported from Qiime2. This data was extraacted after generating the taxa-bar-plot.qzv file in the Qiime2 tutorial. For example, my code for to generate these files in Qiime2 were:
+
+qiime taxa barplot --i-table Decontam_Mouse_Study_Table_1k.qza --i-taxonomy ../taxonomy.qza --o-visualization mouse-decontam-taxa-bar-plots.qzv
+
+qiime taxa barplot --i-table Human_Samples_table.qza --i-taxonomy ../taxonomy.qza --o-visualization human-taxa-bar-plots.qzv
+
+IMPORTANTLY, when running Maaslin2, we run the model separately at each taxonomic level. That is, we would look at read counts at the species level separate from the family level (think: King Philip Came Over For Good Soup). 
+
+Prior to uploading read count the files as data frames, please open these files (which are on canvas) on your computer. Discuss with a partner how they vary. Which one do you predict will have the largest dimensions? 
+
+### 2.1 Uploading Sequencing Data
+
+Use the following code to import the read count data.
+
+```{r import readcount data}
+
+#human first
+human_1_kindgdom= read.table(file = "level-1-human.tsv", header = TRUE, row.names = 1, stringsAsFactors = FALSE) 
+human_2_phylum= read.table(file = "level-2-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE)
+human_3_class= read.table(file = "level-3-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+human_4_order= read.table(file = "level-4-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+human_5_family= read.table(file = "level-5-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+human_6_genus= read.table(file = "level-6-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+human_7_species= read.table(file = "level-7-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+
+#mouse second 
+mouse_1_kindgdom= read.table(file = "level-1-mouse.tsv", header = TRUE, row.names = 1, stringsAsFactors = FALSE) 
+mouse_2_phylum= read.table(file = "level-2-mouse.tsv", header = TRUE, row.names = 1, stringsAsFactors = FALSE) 
+mouse_3_class= read.table(file = "level-3-mouse.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+mouse_4_order= read.table(file = "level-4-mouse.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+mouse_5_family= read.table(file = "level-5-mouse.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE)
+mouse_6_genus= read.table(file = "level-6-mouse.tsv", header = TRUE, sep="\t", row.names = 1, stringsAsFactors = FALSE)
+mouse_7_species = read.table(file= "level-7-mouse.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE)
+
+#check the dimensions of the 14 different tables - was your prediction correct? What is the significance of the dimenstions of these tables? 
+dim(human_4_order)
+dim(human_7_species)                                                                                                                     
+```
+
+# Part 3: Running Maaslin2 Cross-Sectional Analysis
+
+Now, we will run Maaslin2 on our mouse data. There are 4 key parameters to run Maaslin2: (1) input meta'omics data, (2) metadata, (3) output folder name, and (4) fixed effects. 
+
+Fixed effects are the factors we are testing for significance across in our data set. A huge advantage of Maaslin2 is that we can also add random effects to control for repeated measures. For example, we can add Mouse_ID as a random effect to control for repeated samples from the same mouse and Day to control for day when looking at the effects on the hormone. 
+
+Maaslin2 has additional parameters that can be added (we will explore a subset below). To learn more, navigate to the "Options" section of the user manual (https://github.com/biobakery/Maaslin2?tab=readme-ov-file#options). 
+
+### 3.1 Example 1: Effect of PGH Hormone 
+
+Let's say I want to see if there are any significant microbial differences between baseline and intervention days for mice given PGH only (not antibiotics). Here, I would filter my data to only include these mice and exclude D0 as the sample was taken prior to hormone dosage. 
+
+```{r maaslin cross sectional ex. 1}
+#filter data for samples of interest 
+
+ex_3_1_meta <-filter(df_mouse_metadata, df_mouse_metadata$Group_full == "PGH_Non_ABX" & df_mouse_metadata$Day != "D0")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_3_1_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_3_1_meta, 
+    output = "PGH_Species", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+#now we'll run it at the genus level
+ex_3_1_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = ex_3_1_meta, 
+    output = "PGH_Genus", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+#now we'll run it at the phylum level
+ex_3_1_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_3_1_meta, 
+    output = "PGH_Phylum", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+#TASK: Edit the code above to rerun this analysis at the class, order, and family level. Be sure to rename the output files each time so that they do not overwrite existing analysis. 
+
+```
+
+If you navigate to your directory on your desktop, you will see a new folder with outputs from running Maaslin2. They are:
+
+Data Files: 
+
+- **significant_results.tsv**
+These are the full list of associations that pass MaAsLin2's significance threshold, ordered by increasing q-values
+- **all_results.tsv**
+Same format as significant_results.tsv, but include all association results (instead of just the significant ones).
+- **residuals.rds**
+This file contains a data frame with residuals for each feature.
+- **maaslin2.log**
+This file contains all log information for the run. It includes all settings, warnings, errors, and steps run.
+
+Visualization Files: 
+
+- **heatmap.pdf**
+This file contains a heatmap of the significant associations.
+- **[a-z/0-9]+.pdf**
+A plot is generated for each significant association. Scatter plots are used for continuous metadata. Box plots are for categorical data. Data points plotted are after normalization, filtering, and transform.
+
+Before moving to the next example, explore the output files with a partner. What do you observe? Are there any significant microbial differences? 
+
+TASK: With a partner, repeat example 3.1 above, but instead explore if administering the PL hormone induced any gut microbial composition changes between baseline and intervention. 
+
+### 3.2 Example 2: Effects of antibiotics of the gut microbiome. 
+
+Let's say I am really interested in the effects of antibiotics on the taxonomic composition of the gut, and I do not want to deal with the confounding hormones. Here, I will filter the samples for just mice that received saline and look for significant associations based on antibiotic status, again controlling for Mouse ID and Day. 
+
+```{r maaslin cross secional ex. 2}
+
+ex_3_2_meta <-filter(df_mouse_metadata, df_mouse_metadata$Hormone == "Saline" & df_mouse_metadata$Day != "D-5")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_3_2_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_3_2_meta, 
+    output = "ABX_Species", 
+    fixed_effects = c("Antibiotics"),
+    random_effects = c("Mouse_ID", "Day"))
+
+#now we'll run it at the class level
+ex_3_2_class = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = ex_3_2_meta, 
+    output = "ABX_Class", 
+    fixed_effects = c("Antibiotics"),
+    random_effects = c("Mouse_ID", "Day"))
+
+#now we'll run it at the phylum level
+ex_3_2_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_3_2_meta, 
+    output = "ABX_Phylum", 
+    fixed_effects = c("Antibiotics"),
+    random_effects = c("Mouse_ID", "Day"))
+
+
+#TASK: If you are interested in the effects of antibiotics, continue to generate significant associations at different taxonomic levels. 
+
+ex_3_2_kingdom = Maaslin2(
+    input_data = mouse_1_kindgdom, 
+    input_metadata = ex_3_2_meta, 
+    output = "ABX_Kingdom", 
+    fixed_effects = c("Antibiotics"),
+    random_effects = c("Mouse_ID", "Day"))
+
+```
+
+
+### 3.3 Example 3: Comparing Hormone Groups to Controls
+
+What if I want to compare more than two groups? To do this, I can tell Maaslin2 which group is the reference or "baseline" group, which is the factor to use as a reference for a variable with more than two levels provided.
+
+Here, I am going to cut the data cross sectional at intervention days on mice not receiving antibiotics to see if mice receiving the hormone had differences compared to those that recieved saline. 
+
+```{r maaslin cross secional ex. 3}
+
+ex_3_3_meta <-filter(df_mouse_metadata, df_mouse_metadata$Antibiotics == "Non_ABX" & df_mouse_metadata$Day != "D0" & df_mouse_metadata$TimePoint == "Intervention")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_3_3_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_3_3_meta, 
+    output = "All_Hormone_Species", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline"))
+
+#What is the last line of Maaslin2 in your console? 
+
+#now we'll run it at the genus level
+ex_3_3_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = ex_3_3_meta, 
+    output = "All_Hormone_Genus", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline"))
+
+
+#now we'll run it at the phylum level
+ex_3_3_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_3_3_meta, 
+    output = "All_Hormone_Phylum", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline"))
+
+#Task: Discuss with your partner what the implications are of negative results here. 
+
+```
+
+# Part 4: Running Maaslin2 Longitudinal Analysis
+
+Thus far, we have just looked for differences in gut microbial taxa across categorical variables. With Maaslin2, we can also look for microbial features that change longitudinally (over time). 
+
+### 4.1 Example 1: Antibiotics Over Time
+
+First, if I am interested in the effects of antibiotics longitudinally without the confound of hormones, I could filter the data for mice receiving antibiotics and no hormone and look across days. 
+
+```{r longitudinal ex. 1}
+
+ex_4_1_meta <-filter(df_mouse_metadata, df_mouse_metadata$Group_full == "Saline_ABX")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_4_1_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_4_1_meta, 
+    output = "ABX_Long_Species", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+#now we'll run it at the genus level
+ex_4_1_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = ex_4_1_meta, 
+    output = "ABX_Long_Genus", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+#now we'll run it at the phylum level
+ex_4_1_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_4_1_meta, 
+    output = "ABX_Long_Phylum", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+#Task: with a partner, explore the output from these models. How do they differ from the cross sectional tests? 
+
+#Task: Generate the associations for the remaining taxonomic levels. 
+
+```
+
+### 4.2: Example 2: Cross-Sectional & Longitudinal 
+
+Maaslin2 allows us to test both categorical and longitudinal variables at once. Here, I am going to look at mice who were given PGH hormone and include differences in both the antibiotic status and change over time. 
+
+```{r longitudinal ex. 2}
+
+ex_4_2_meta <-filter(df_mouse_metadata, df_mouse_metadata$Hormone == "PGH")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_4_2_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_4_2_meta, 
+    output = "Both_Species", 
+    fixed_effects = c("Day_Num", "Antibiotics"),
+    random_effects = c("Mouse_ID"))
+
+#now we'll run Maaslin2 at the phylum level
+ex_4_2_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_4_2_meta, 
+    output = "Both_Phylum", 
+    fixed_effects = c("Day_Num", "Antibiotics"),
+    random_effects = c("Mouse_ID"))
+
+#With a partner, explore the output. Generate plots at different taxonomic levels. 
+```
+
+### 4.3 Example 3: Isolating Shifts in Response to Hormone
+Instead of looking at the effects of antibiotics longitudinally, we can look at the effects of a hormone and compare it to the saline group. Here, we will focus on PGH. 
+
+```{r longitudinal ex. 3}
+
+ex_4_3_meta <-filter(df_mouse_metadata, df_mouse_metadata$Hormone != "PL" & df_mouse_metadata$Antibiotics == "Non_ABX")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_4_3_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_4_3_meta, 
+    output = "PGH_Long", 
+    fixed_effects = c("Day_Num", "Hormone"),
+    random_effects = c("Mouse_ID"))
+
+#Task: with a partner, discuss hypotheses you plan to test for your final paper. After exploring this tool, how could you subset the data to test your hypotheses?  
+
+
+```
+

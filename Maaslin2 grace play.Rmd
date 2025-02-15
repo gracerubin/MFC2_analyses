@@ -1,0 +1,1934 @@
+---
+title: 'HEB 114 Maaslin2: Testing for Significant Microbial Associations'
+author: "Emily Venable"
+date: "01-12-2024"
+output:
+  html_document: default
+  pdf_document: default
+---
+Please follow code below to set up R environment and computer for Maaslin2. 
+
+```{r setup}
+#installing potentially redundant packages 
+#install.packages('plyr', repos = "http://cran.us.r-project.org")
+#install.packages("dplyr")
+library(dplyr)
+
+#installing Maaslin2 
+#if(!requireNamespace("BiocManager", quietly = TRUE))
+ #   install.packages("BiocManager")
+#BiocManager::install("Maaslin2")
+
+#Creating directory for Maaslin2 Analysis
+#getwd()
+#setwd("~/Desktop")
+
+#dir.create("HEB114_Maaslin_Analysis") # Create a new directory
+#setwd("HEB114_Maaslin_Analysis") # Change the current working directory 
+getwd() #check if directory has been successfully changed
+
+#move files on class website to this new directory
+
+#Load MaAsLin 2 package into the R environment
+library(Maaslin2)
+?Maaslin2 #shows information about Maaslin2
+
+```
+
+
+### Maaslin2 Tutorial
+
+- **Part 1: Introduction & Uploading Metadata**
+- **Part 2: Uploading Sequencing Data**
+- **Part 3: Running Maaslin2 Cross-Sectional Analysis**
+- **Part 4: Running Maaslin2 Longitudinal Analysis**
+
+# Part 1: Introduction & Uploading Metadata
+
+This tutorial introduces Maaslin2, a comprehensive R package for identifying significant, multivariable associations between study interventions and microbial meta'omic features (here taxonomic compositions). It provides a way to deal with high-dimensional, zero-inflated data and can handle both cross-sectional and longitudinal study designs. This statistical approach was produced and is maintained by The Huttenhower Lab at the Harvard School of Public Health. 
+
+The core of Maaslin2 is running linear mixed effects models to test for significant microbial associations between treatment groups, over time, or in-response to an intervention. We will feed "raw count" data (i.e. the number of reads mapping to each microbial taxa across samples), which Maaslin2 will normalize using total-sum scaling TSS and log transforming to make our data appropriate for linear mixed effects models. 
+
+After these models are run, Maaslin2 identifies significant associations and generates box plots for significant associations across fixed variables and scatter plots for significant associations across continuous variables. 
+
+Final note before starting: if you plan to include Maaslin2 analysis in your final paper, please cite this paper in your work cited section: Mallick H, Rahnavard A, McIver LJ, Ma S, Zhang Y, Nguyen LH, Tickle TL, Weingart G, Ren B, Schwager EH, Chatterjee S, Thompson KN, Wilkinson JE, Subramanian A, Lu Y, Waldron L, Paulson JN, Franzosa EA, Bravo HC, Huttenhower C (2021). Multivariable Association Discovery in Population-scale Meta-omics Studies. PLoS Computational Biology, 17(11):e1009442.
+
+**Additional Resources:**
+
+- _Huttenhower Lab Description:_ https://huttenhower.sph.harvard.edu/maaslin
+- _Maaslin2 User Manual:_ https://github.com/biobakery/Maaslin2
+- _Maaslin 2.0 Tutorial:_ https://github.com/biobakery/biobakery/wiki/maaslin2#1-installing-r
+
+### 1.1 Uploading Metadata
+
+We will upload metadata for the mouse samples and human samples separately. It is easiest to upload these as data frames so that we can filter samples easier. Please note that while this tutorial only focuses on the mouse samples, you can edit this code to run Maaslin2 on the human samples. 
+
+
+```{r uploading metadata}
+
+df_human_metadata = read.table(file = "HEB114_human_metadata.tsv", header = TRUE, sep = "\t",
+                                row.names = 1,
+                                stringsAsFactors = FALSE)
+
+df_mouse_metadata = read.table(file = "HEB114_mouse_metadata.tsv", header = TRUE, sep = "\t",
+                                row.names = 1,
+                                stringsAsFactors = FALSE)
+
+df_mouse_metadata$Day <- factor(df_mouse_metadata$Day, levels = c("D-5", "D-3", "D0", "D3", "D5", "D8")) #change day to factor
+class(df_mouse_metadata$Day) #check change
+
+```
+
+# Part 2: Uploading Sequencing Data
+
+Now, we will upload the sequencing data that was exported from Qiime2. This data was extracted after generating the taxa-bar-plot.qzv file in the Qiime2 tutorial. For example, my code for to generate these files in Qiime2 were:
+
+qiime taxa barplot --i-table Decontam_Mouse_Study_Table_1k.qza --i-taxonomy ../taxonomy.qza --o-visualization mouse-decontam-taxa-bar-plots.qzv
+
+qiime taxa barplot --i-table Human_Samples_table.qza --i-taxonomy ../taxonomy.qza --o-visualization human-taxa-bar-plots.qzv
+
+IMPORTANTLY, when running Maaslin2, we run the model separately at each taxonomic level. That is, we would look at read counts at the species level separate from the family level (think: King Philip Came Over For Good Soup). 
+
+Prior to uploading read count the files as data frames, please open these files (which are on canvas) on your computer. Discuss with a partner how they vary. Which one do you predict will have the largest dimensions? 
+
+### 2.1 Uploading Sequencing Data
+
+Use the following code to import the read count data.
+
+```{r import readcount data}
+
+#human first
+human_1_kindgdom= read.table(file = "level-1-human.tsv", header = TRUE, row.names = 1, stringsAsFactors = FALSE) 
+human_2_phylum= read.table(file = "level-2-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE)
+human_3_class= read.table(file = "level-3-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+human_4_order= read.table(file = "level-4-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+human_5_family= read.table(file = "level-5-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+human_6_genus= read.table(file = "level-6-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+human_7_species= read.table(file = "level-7-human.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+
+#mouse second 
+mouse_1_kindgdom= read.table(file = "level-1-mouse.tsv", header = TRUE, row.names = 1, stringsAsFactors = FALSE) 
+mouse_2_phylum= read.table(file = "level-2-mouse.tsv", header = TRUE, row.names = 1, stringsAsFactors = FALSE) 
+mouse_3_class= read.table(file = "level-3-mouse.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+mouse_4_order= read.table(file = "level-4-mouse.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE) 
+mouse_5_family= read.table(file = "level-5-mouse.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE)
+mouse_6_genus= read.table(file = "level-6-mouse.tsv", header = TRUE, sep = "\t", row.names = 1, stringsAsFactors = FALSE) 
+mouse_7_species = read.table(file= "level-7-mouse.tsv", header = TRUE, sep = ",", row.names = 1, stringsAsFactors = FALSE)
+
+#check the dimensions of the 14 different tables - was your prediction correct? What is the significance of the dimensions of these tables? 
+dim(human_4_order)
+dim(human_7_species)                                                                                                                     
+```
+
+# Part 3: Running Maaslin2 Cross-Sectional Analysis
+
+Now, we will run Maaslin2 on our mouse data. There are 4 key parameters to run Maaslin2: (1) input meta'omics data, (2) metadata, (3) output folder name, and (4) fixed effects. 
+
+Fixed effects are the factors we are testing for significance across in our data set. A huge advantage of Maaslin2 is that we can also add random effects to control for repeated measures. For example, we can add Mouse_ID as a random effect to control for repeated samples from the same mouse and Day to control for day when looking at the effects on the hormone. 
+
+Maaslin2 has additional parameters that can be added (we will explore a subset below). To learn more, navigate to the "Options" section of the user manual (https://github.com/biobakery/Maaslin2?tab=readme-ov-file#options). 
+
+### 3.1 Example 1: Effect of PGH Hormone 
+
+Let's say I want to see if there are any significant microbial differences between baseline and intervention days for mice given PGH only (not antibiotics). Here, I would filter my data to only include these mice and exclude D0 as the sample was taken prior to hormone dosage. 
+
+```{r maaslin cross sectional ex. 1}
+#filter data for samples of interest 
+
+ex_3_1_meta <-filter(df_mouse_metadata, df_mouse_metadata$Group_full == "PGH_Non_ABX" & df_mouse_metadata$Day != "D0")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_3_1_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_3_1_meta, 
+    output = "PGH_Species", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day")) # Grace note --- should day instead be a fixed effect? If effects linearly increase with # of days dosed...
+
+#now we'll run it at the genus level
+ex_3_1_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = ex_3_1_meta, 
+    output = "PGH_Genus", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day")) 
+
+#now we'll run it at the phylum level
+ex_3_1_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_3_1_meta, 
+    output = "PGH_Phylum", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+#TASK: Edit the code above to rerun this analysis at the class, order, and family level. Be sure to rename the output files each time so that they do not overwrite existing analysis. 
+
+# CLASS
+ex_3_1_class = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = ex_3_1_meta, 
+    output = "PGH_Class", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+# ORDER
+ex_3_1_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = ex_3_1_meta, 
+    output = "PGH_Order", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+# FAMILY
+ex_3_1_family = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = ex_3_1_meta, 
+    output = "PGH_Family", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+```
+
+If you navigate to your directory on your desktop, you will see a new folder with outputs from running Maaslin2. They are:
+
+Data Files: 
+
+- **significant_results.tsv**
+These are the full list of associations that pass MaAsLin2's significance threshold, ordered by increasing q-values
+- **all_results.tsv**
+Same format as significant_results.tsv, but include all association results (instead of just the significant ones).
+- **residuals.rds**
+This file contains a data frame with residuals for each feature.
+- **maaslin2.log**
+This file contains all log information for the run. It includes all settings, warnings, errors, and steps run.
+
+Visualization Files: 
+
+- **heatmap.pdf**
+This file contains a heatmap of the significant associations. # I don't see this one? 
+- **[a-z/0-9]+.pdf**
+A plot is generated for each significant association. Scatter plots are used for continuous metadata. Box plots are for categorical data. Data points plotted are after normalization, filtering, and transform.
+
+Before moving to the next example, explore the output files with a partner. What do you observe? Are there any significant microbial differences? 
+
+TASK: With a partner, repeat example 3.1 above, but instead explore if administering the PL hormone induced any gut microbial composition changes between baseline and intervention. 
+```{r maaslin cross sectional ex. 3}
+#filter data for samples of interest 
+
+ex_3_2_meta <-filter(df_mouse_metadata, df_mouse_metadata$Group_full == "PL_Non_ABX" & df_mouse_metadata$Day != "D0")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_3_2_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_3_2_meta, 
+    output = "PL_Species", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day")) 
+
+#now we'll run it at the genus level
+ex_3_2_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = ex_3_2_meta, 
+    output = "PL_Genus", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day")) 
+
+#now we'll run it at the phylum level
+ex_3_2_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_3_2_meta, 
+    output = "PL_Phylum", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+# CLASS
+ex_3_2_class = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = ex_3_2_meta, 
+    output = "PL_Class", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+# ORDER
+ex_3_2_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = ex_3_2_meta, 
+    output = "PL_Order", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+# FAMILY
+ex_3_2_family = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = ex_3_2_meta, 
+    output = "PL_Family", 
+    fixed_effects = c("TimePoint"),
+    random_effects = c("Mouse_ID", "Day"))
+
+```
+
+### 3.2 Example 2: Effects of antibiotics of the gut microbiome. 
+
+Let's say I am really interested in the effects of antibiotics on the taxonomic composition of the gut, and I do not want to deal with the confounding hormones. Here, I will filter the samples for just mice that received saline and look for significant associations based on antibiotic status, again controlling for Mouse ID and Day. 
+
+```{r maaslin cross secional ex. 2}
+
+ex_3_2_meta <-filter(df_mouse_metadata, df_mouse_metadata$Hormone == "Saline" & df_mouse_metadata$Day != "D-5")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_3_2_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_3_2_meta, 
+    output = "ABX_Species", 
+    fixed_effects = c("Antibiotics"),
+    random_effects = c("Mouse_ID", "Day"))
+
+#now we'll run it at the class level
+ex_3_2_class = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = ex_3_2_meta, 
+    output = "ABX_Class", 
+    fixed_effects = c("Antibiotics"),
+    random_effects = c("Mouse_ID", "Day"))
+
+#now we'll run it at the phylum level
+ex_3_2_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_3_2_meta, 
+    output = "ABX_Phylum", 
+    fixed_effects = c("Antibiotics"),
+    random_effects = c("Mouse_ID", "Day"))
+
+#TASK: If you are interested in the effects of antibiotics, continue to generate significant associations at different taxonomic levels. 
+
+# kingdom level
+ex_3_2_kingdom = Maaslin2(
+    input_data = mouse_1_kindgdom, 
+    input_metadata = ex_3_2_meta, 
+    output = "ABX_Kingdom", 
+    fixed_effects = c("Antibiotics"),
+    random_effects = c("Mouse_ID", "Day"))
+
+```
+
+### 3.3 Example 3: Comparing Hormone Groups to Controls
+
+What if I want to compare more than two groups? To do this, I can tell Maaslin2 which group is the reference or "baseline" group, which is the factor to use as a reference for a variable with more than two levels provided.
+
+Here, I am going to cut the data cross sectional at intervention days on mice not receiving antibiotics to see if mice receiving the hormone had differences compared to those that received saline. 
+
+```{r maaslin cross secional ex. 3}
+
+ex_3_3_meta <-filter(df_mouse_metadata, df_mouse_metadata$Antibiotics == "Non_ABX" & df_mouse_metadata$Day != "D0" & df_mouse_metadata$TimePoint == "Intervention")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_3_3_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_3_3_meta, 
+    output = "All_Hormone_Species", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline"))
+
+#What is the last line of Maaslin2 in your console? 
+
+#now we'll run it at the genus level
+ex_3_3_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = ex_3_3_meta, 
+    output = "All_Hormone_Genus", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline"))
+
+#now we'll run it at the phylum level
+ex_3_3_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_3_3_meta, 
+    output = "All_Hormone_Phylum", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline"))
+
+#Task: Discuss with your partner what the implications are of negative results here. 
+
+```
+
+# Part 4: Running Maaslin2 Longitudinal Analysis
+
+Thus far, we have just looked for differences in gut microbial taxa across categorical variables. With Maaslin2, we can also look for microbial features that change longitudinally (over time). 
+
+
+### 4.1 Example 1: Antibiotics Over Time
+
+First, if I am interested in the effects of antibiotics longitudinally without the confound of hormones, I could filter the data for mice receiving antibiotics and no hormone and look across days. 
+
+```{r longitudinal ex. 1}
+
+ex_4_1_meta <-filter(df_mouse_metadata, df_mouse_metadata$Group_full == "Saline_ABX")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_4_1_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_4_1_meta, 
+    output = "ABX_Long_Species", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+#now we'll run it at the genus level
+ex_4_1_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = ex_4_1_meta, 
+    output = "ABX_Long_Genus", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+#now we'll run it at the phylum level
+ex_4_1_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_4_1_meta, 
+    output = "ABX_Long_Phylum", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+#Task: with a partner, explore the output from these models. How do they differ from the cross sectional tests? 
+
+#Task: Generate the associations for the remaining taxonomic levels. 
+
+```
+
+### 4.2: Example 2: Cross-Sectional & Longitudinal 
+
+Maaslin2 allows us to test both categorical and longitudinal variables at once. Here, I am going to look at mice who were given PGH hormone and include differences in both the antibiotic status and change over time. 
+
+```{r longitudinal ex. 2}
+
+ex_4_2_meta <-filter(df_mouse_metadata, df_mouse_metadata$Hormone == "PGH")
+
+#open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_4_2_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_4_2_meta, 
+    output = "PGH_Both_Species", 
+    fixed_effects = c("Day_Num", "Antibiotics"),
+    random_effects = c("Mouse_ID"))
+
+#now we'll run Maaslin2 at the phylum level
+ex_4_2_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_4_2_meta, 
+    output = "PGH_Both_Phylum", 
+    fixed_effects = c("Day_Num", "Antibiotics"),
+    random_effects = c("Mouse_ID"))
+
+# trying interaction effect
+ex_4_2_phylum_interaction = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = ex_4_2_meta, 
+    output = "PGH_Both_Phylum_interaction", 
+    fixed_effects = c("Day_Num", "Antibiotics", "Day_Num:Antibiotics"),
+    random_effects = c("Mouse_ID"))
+#With a partner, explore the output. Generate plots at different taxonomic levels. 
+
+```
+
+### 4.3 Example 3: Isolating Shifts in Response to Hormone
+Instead of looking at the effects of antibiotics longitudinally, we can look at the effects of a hormone and compare it to the saline group. Here, we will focus on PGH. 
+
+```{r longitudinal ex. 3}
+
+ex_4_3_meta <- filter(df_mouse_metadata, df_mouse_metadata$Hormone != "PL" & df_mouse_metadata$Antibiotics == "Non_ABX")
+
+# open and check file to ensure that samples were correctly subsetted 
+
+#now we'll run Maaslin2 at the species level
+ex_4_3_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = ex_4_3_meta, 
+    output = "PGH_Long", 
+    fixed_effects = c("Day_Num", "Hormone"),
+    random_effects = c("Mouse_ID"))
+
+#Task: with a partner, discuss hypotheses you plan to test for your final paper. After exploring this tool, how could you subset the data to test your hypotheses?  
+
+
+```
+
+```{r grace play 1}
+
+# including D8
+grace_play_1_meta <- filter(df_mouse_metadata, df_mouse_metadata$Hormone == "PL" & df_mouse_metadata$Antibiotics == "Non_ABX")
+
+grace_play_1_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_1_meta, 
+    output = "PL_Long_species", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_1_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_1_meta, 
+    output = "PL_Long_phylum", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+
+# excluding D8 --- I trust this more! 
+grace_play_1_meta <- filter(df_mouse_metadata, df_mouse_metadata$Hormone == "PL" & df_mouse_metadata$Antibiotics == "Non_ABX" & df_mouse_metadata$Day_Num != "8")
+
+grace_play_1_phylum_no_d8 = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_1_meta, 
+    output = "PL_Long_phylum_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_1_class_no_d8 = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = grace_play_1_meta, 
+    output = "PL_Long_class_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_1_order_no_d8 = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = grace_play_1_meta, 
+    output = "PL_Long_order_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_1_family_no_d8 = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = grace_play_1_meta, 
+    output = "PL_Long_family_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_1_genus_no_d8 = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_1_meta, 
+    output = "PL_Long_genus_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_1_species_no_d8 = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_1_meta, 
+    output = "PL_Long_species_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+# lots to chew on here. 
+
+```
+
+```{r grace play 2}
+# PGH longitudinally excluding D8 
+grace_play_2_meta <- filter(df_mouse_metadata, df_mouse_metadata$Hormone == "PGH" & df_mouse_metadata$Antibiotics == "Non_ABX" & df_mouse_metadata$Day_Num != "8")
+
+grace_play_2_phylum_no_d8 = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_2_meta, 
+    output = "PGH_Long_phylum_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_2_class_no_d8 = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = grace_play_2_meta, 
+    output = "PGH_Long_class_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_2_order_no_d8 = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = grace_play_2_meta, 
+    output = "PGH_Long_order_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_2_family_no_d8 = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = grace_play_2_meta, 
+    output = "PGH_Long_family_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_2_genus_no_d8 = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_2_meta, 
+    output = "PGH_Long_genus_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_2_species_no_d8 = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_2_meta, 
+    output = "PGH_Long_species_no_d8", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))
+```
+
+```{r grace play 3}
+
+# still comparing intervention all 3 hormones compared to saline as reference (vs just saline vs 1 other)
+    # but without D8, which is weird and might be muddling things (i.e. this is D3 + D5 together)
+
+grace_play_3_meta <-filter(df_mouse_metadata, df_mouse_metadata$Antibiotics == "Non_ABX" & df_mouse_metadata$Day != "D0" & df_mouse_metadata$Day != "D8" & df_mouse_metadata$TimePoint == "Intervention")
+
+#now we'll run Maaslin2 at the species level
+grace_play_3_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_3_meta, 
+    output = "All_Hormone_Species_noD8", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline")) # still no associations at species
+
+#now we'll run it at the genus level
+grace_play_3_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_3_meta, 
+    output = "All_Hormone_Genus_noD8", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline")) # still no associations at genus
+
+#now we'll run it at the phylum level
+grace_play_3_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_3_meta, 
+    output = "All_Hormone_Phylum_noD8", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline")) # still no associations to plot 
+
+#now we'll run it at the family level
+grace_play_3_phylum = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = grace_play_3_meta, 
+    output = "All_Hormone_Family_noD8", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline")) # still no associations to plot 
+
+# Now doing just PL vs Saline
+
+# What if just D5? Like an endpoint
+grace_play_4_meta <-filter(df_mouse_metadata, df_mouse_metadata$Antibiotics == "Non_ABX" & df_mouse_metadata$Day == "D5" & df_mouse_metadata$TimePoint == "Intervention" & df_mouse_metadata$Hormone != "PGH")
+
+#now we'll run Maaslin2 at the species level
+grace_play_4_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_4_meta, 
+    output = "PLvsSaline_Species_D5", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID")) # still no associations at species
+
+
+#now we'll run it at the genus level
+grace_play_4_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_4_meta, 
+    output = "PLvsSaline_Genus_D5", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID")) # still no associations at genus
+
+# What if just D5? Like an endpoint for PGH
+grace_play_5_meta <-filter(df_mouse_metadata, df_mouse_metadata$Antibiotics == "Non_ABX" & df_mouse_metadata$Day == "D5" & df_mouse_metadata$TimePoint == "Intervention" & df_mouse_metadata$Hormone != "PL")
+
+#now we'll run Maaslin2 at the species level
+grace_play_5_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_5_meta, 
+    output = "PGHvsSaline_Species_D5", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID")) # still no associations at species
+
+
+#now we'll run it at the genus level
+grace_play_5_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_5_meta, 
+    output = "PGHvsSaline_Genus_D5", 
+    fixed_effects = c("Hormone"),
+    random_effects = c("Mouse_ID")) # still no associations at genus
+
+```
+
+
+We can also use Maaslin2 to look at taxnomic correlations with other data 
+I'm loading these into my enviro within other scripts, so can't replicate this directly...
+
+```{r grace play 4}
+# do I have to match to the metadata here for row names? maybe
+
+# Echo_metadata_df
+Echo_adjusted_baseline <- EchoMRI %>% 
+  rename(Mouse_Num = Mouse) %>% 
+  filter(Day == "D-3") %>% 
+  select(Mouse_Num, Fat_percentage:Total_water_percentage)
+
+Echo_adjusted_endpoint <- EchoMRI %>% 
+  rename(Mouse_Num = Mouse) %>% 
+  filter(Day == "D5") %>% 
+  select(Mouse_Num, Fat_percentage:Total_water_percentage)
+
+df_mouse_metadata_adjusted_baseline <- df_mouse_metadata %>% 
+  rownames_to_column(var = "Sample_ID")  %>% 
+  filter(Day == "D-3")
+
+df_mouse_metadata_adjusted_endpoint <- df_mouse_metadata %>% 
+  rownames_to_column(var = "Sample_ID")  %>% 
+  filter(Day == "D5")
+
+# JUST BASELINE ECHO DF
+Echo_adjusted_baseline <- left_join(df_mouse_metadata_adjusted_baseline, Echo_adjusted_baseline, by = "Mouse_Num") %>% column_to_rownames(var = "Sample_ID")
+
+# JUST ENDPOINT ECHO DF
+Echo_adjusted_endpoint <- left_join(df_mouse_metadata_adjusted_endpoint, Echo_adjusted_endpoint, by = "Mouse_Num")%>% column_to_rownames(var = "Sample_ID")
+
+# ALL ECHO DF
+Echo_metadata_df_full <- rbind(Echo_adjusted_baseline, Echo_adjusted_endpoint)
+
+# skipping weight for now
+View(Weight)
+
+# OGTTs -- no fecal samples taken on those days, so we have to do the sample from the day before or after
+View(OGTTs_wide)
+OGTTs_adjusted_baseline <- OGTTs_wide %>% 
+  rename(Mouse_Num = Mouse) %>% 
+  filter(Day == "D-2") %>% 
+  select(Mouse_Num, Time_0, AUC)
+
+OGTTs_adjusted_baseline$Mouse_Num <- as.character(OGTTs_adjusted_baseline$Mouse_Num)
+
+OGTTs_adjusted_endpoint <- OGTTs_wide %>% 
+  rename(Mouse_Num = Mouse) %>% 
+  filter(Day == "D6") %>% 
+  select(Mouse_Num, Time_0, AUC)
+
+OGTTs_adjusted_endpoint$Mouse_Num <- as.character(OGTTs_adjusted_endpoint$Mouse_Num)
+
+# samples from day before 
+df_mouse_metadata_ogtt_baseline <- df_mouse_metadata %>% 
+  rownames_to_column(var = "Sample_ID")  %>% 
+  filter(Day == "D-3")
+df_mouse_metadata_ogtt_baseline$Mouse_Num <- as.character(df_mouse_metadata_ogtt_baseline$Mouse_Num)
+
+df_mouse_metadata_ogtt_endpoint <- df_mouse_metadata %>% 
+  rownames_to_column(var = "Sample_ID")  %>% 
+  filter(Day == "D5")
+df_mouse_metadata_ogtt_endpoint$Mouse_Num <- as.character(df_mouse_metadata_ogtt_endpoint$Mouse_Num)
+
+# JUST BASELINE OGTT DF
+OGTTs_adjusted_baseline <- left_join(df_mouse_metadata_ogtt_baseline, OGTTs_adjusted_baseline, by = "Mouse_Num") %>% column_to_rownames(var = "Sample_ID")
+
+# JUST ENDPOINT OGTT DF
+OGTTs_adjusted_endpoint <- left_join(df_mouse_metadata_ogtt_endpoint, OGTTs_adjusted_endpoint, by = "Mouse_Num")%>% column_to_rownames(var = "Sample_ID")
+
+# ALL OGTT DF
+OGTTs_metadata_df_full <- rbind(OGTTs_adjusted_baseline, OGTTs_adjusted_endpoint)
+
+# ITTs
+View(ITTs_wide)
+
+ITTs_adjusted_baseline <- ITTs_wide %>% 
+  rename(Mouse_Num = Mouse) %>% 
+  filter(Day == "D-1") %>% 
+  select(Mouse_Num, Time_0, AUC)
+
+ITTs_adjusted_endpoint <- ITTs_wide %>% 
+  rename(Mouse_Num = Mouse) %>% 
+  filter(Day == "D7") %>% 
+  select(Mouse_Num, Time_0, AUC)
+
+df_mouse_metadata_itt_baseline <- df_mouse_metadata %>% 
+  rownames_to_column(var = "Sample_ID")  %>% 
+  filter(Day == "D-3")
+df_mouse_metadata_itt_baseline$Mouse_Num <- as.character(df_mouse_metadata_itt_baseline$Mouse_Num)
+
+df_mouse_metadata_itt_endpoint <- df_mouse_metadata %>% 
+  rownames_to_column(var = "Sample_ID")  %>% 
+  filter(Day == "D5") # choosing D5 since the d8s were weird!
+df_mouse_metadata_itt_endpoint$Mouse_Num <- as.character(df_mouse_metadata_itt_endpoint$Mouse_Num)
+
+# JUST BASELINE ITT DF
+ITTs_adjusted_baseline <- left_join(df_mouse_metadata_itt_baseline, ITTs_adjusted_baseline, by = "Mouse_Num") %>% column_to_rownames(var = "Sample_ID")
+
+# JUST ENDPOINT ITT DF
+ITTs_adjusted_endpoint <- left_join(df_mouse_metadata_itt_endpoint, ITTs_adjusted_endpoint, by = "Mouse_Num")%>% column_to_rownames(var = "Sample_ID")
+
+# ALL ITT DF
+ITTs_metadata_df_full <- rbind(ITTs_adjusted_baseline, ITTs_adjusted_endpoint)
+
+
+```
+
+Now let's actually try to maaslin this stuff
+```{r grace play 5}
+# At endpoint, does OGTT AUC correlate with anything about microbiome composition? In the non abx mice
+grace_play_6_meta <-filter(OGTTs_adjusted_endpoint, OGTTs_adjusted_endpoint$Antibiotics == "Non_ABX")
+
+# without hormone as a fixed effect
+grace_play_6_a_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_6_meta, 
+    output = "Endpoint_OGTT_AUC_all_hormones_no_fixed_species", 
+    fixed_effects = c("AUC")) # no associations --- deleting file
+
+grace_play_6_a_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_6_meta, 
+    output = "Endpoint_OGTT_AUC_all_hormones_no_fixed_phylum", 
+    fixed_effects = c("AUC")) # no associations --- deleting file
+
+# with hormone as a fixed interaction effect 
+grace_play_6_b_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_6_meta, 
+    output = "Endpoint_OGTT_AUC_all_hormones_fixed_species", 
+    fixed_effects = c("AUC", "Hormone", "AUC:Hormone"),
+    reference = c("Hormone,Saline")) # no associations --- deleting file
+
+grace_play_6_b_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_6_meta, 
+    output = "Endpoint_OGTT_AUC_all_hormones_fixed_phylum", 
+    fixed_effects = c("AUC", "Hormone", "AUC:Hormone"),
+    reference = c("Hormone,Saline")) # no associations --- deleting file
+
+# with hormone as a random effect?
+grace_play_6_c_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_6_meta, 
+    output = "Endpoint_OGTT_AUC_all_hormones_random_species", 
+    fixed_effects = c("AUC"),
+    random_effects = c("Hormone")) # no associations --- deleting file
+
+grace_play_6_c_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_6_meta, 
+    output = "Endpoint_OGTT_AUC_all_hormones_random_phylum", 
+    fixed_effects = c("AUC"),
+    random_effects = c("Hormone")) # no associations --- deleting file
+
+# within each hormone group 
+      # PL
+    grace_play_7_meta <-filter(OGTTs_adjusted_endpoint, OGTTs_adjusted_endpoint$Antibiotics == "Non_ABX" &
+                               OGTTs_adjusted_endpoint$Hormone == "PL") # very small sample size n = 6
+      
+    grace_play_7_a_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_7_meta, 
+    output = "Endpoint_OGTT_AUC_PL_species", 
+    fixed_effects = c("AUC")) # no associations --- many close / signif without correction though. still deleting
+    
+    grace_play_7_a_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_7_meta, 
+    output = "Endpoint_OGTT_AUC_PL_genus", 
+    fixed_effects = c("AUC")) # no associations  ---  deleting
+    
+    grace_play_7_a_family = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = grace_play_7_meta, 
+    output = "Endpoint_OGTT_AUC_PL_family", 
+    fixed_effects = c("AUC")) # no associations  ---  deleting
+    
+    grace_play_7_a_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = grace_play_7_meta, 
+    output = "Endpoint_OGTT_AUC_PL_order", 
+    fixed_effects = c("AUC")) # no associations  ---  deleting
+    
+    grace_play_7_a_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_7_meta, 
+    output = "Endpoint_OGTT_AUC_PL_species_phylum", 
+    fixed_effects = c("AUC")) # no associations  ---  deleting
+
+# At endpoint, does fasting BG correlate with anything about microbiome composition? In the non abx mice? 
+# without hormone as a fixed effect
+
+# tried combining OGTT and ITT metadata, controlling for mice as a random effect since 2 for each, but didn't work because not all mice have 2 (some have NAs)
+both_tolerance_endpoint_metadata_df <- rbind(OGTTs_adjusted_endpoint, ITTs_adjusted_endpoint)
+
+View(both_tolerance_endpoint_metadata_df)
+grace_play_8_meta <-filter(both_tolerance_endpoint_metadata_df, both_tolerance_endpoint_metadata_df$Antibiotics == "Non_ABX" & both_tolerance_endpoint_metadata_df$Time_0 != "NA")
+
+# no hormone effect incorp
+grace_play_8_a_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_species_a", 
+    fixed_effects = c("Time_0"),
+    max_significance = 0.8) # akkermansia muciniphila close p = 0.0288 when unadjusted
+
+grace_play_8_a_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_phylum_a", 
+    fixed_effects = c("Time_0"))  # no signif -- one close: Verrucomicrobia
+
+# hormone as a fixed effect
+grace_play_8_b_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_species_b", 
+    fixed_effects = c("Time_0", "Hormone"),
+    reference = c("Hormone,Saline")) # no signif -- but lot's close 
+
+grace_play_8_b_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_phylum_b", 
+    fixed_effects = c("Time_0", "Hormone"),
+    reference = c("Hormone,Saline")) # no signif 
+
+# trying genus
+grace_play_8_b_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_genus_b", 
+    fixed_effects = c("Time_0", "Hormone"),
+    reference = c("Hormone,Saline")) # no signif -- clostridium really close
+
+# hormone as a random effect
+grace_play_8_c_species = Maaslin2(
+    input_data = mouse_7_species, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_species_c", 
+    fixed_effects = c("Time_0"),
+    random_effects = c("Hormone")) # one is signif but not driven by much and graph not interesting
+
+grace_play_8_c_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_genus_c", 
+    fixed_effects = c("Time_0"),
+    random_effects = c("Hormone")) # 3 are signif, including clostridum
+
+grace_play_8_c_family = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_family_c", 
+    fixed_effects = c("Time_0"),
+    random_effects = c("Hormone")) # no associations at family level
+
+grace_play_8_c_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_order_c", 
+    fixed_effects = c("Time_0"),
+    random_effects = c("Hormone")) # no associations at order level
+
+grace_play_8_c_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_8_meta, 
+    output = "Endpoint_OGTT_fastingBG_all_hormones_phylum_c", 
+    fixed_effects = c("Time_0"),
+    random_effects = c("Hormone")) # no associations at phylum level, but Verrucomicrobia close
+
+
+# Let's try ITT data
+# At endpoint, does ITT AUC correlate with anything about microbiome composition? In the non abx mice
+grace_play_9_meta <-filter(ITTs_adjusted_endpoint, ITTs_adjusted_endpoint$Antibiotics == "Non_ABX")
+
+# without hormone as a fixed effect
+grace_play_9_a_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_no_fixed_genus", 
+    fixed_effects = c("AUC")) # no associations --- deleted file
+
+grace_play_9_a_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_no_fixed_phylum", 
+    fixed_effects = c("AUC")) # no associations --- deleted file
+
+# order
+grace_play_9_a_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_no_fixed_order", 
+    fixed_effects = c("AUC")) # signif! clostridiales
+
+# class
+grace_play_9_a_class = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_no_fixed_class", 
+    fixed_effects = c("AUC")) # none signif -- deleted file
+
+# family
+grace_play_9_a_family = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_no_fixed_family", 
+    fixed_effects = c("AUC")) # none signif -- deleted file
+
+# with hormone as a fixed interaction effect 
+grace_play_9_b_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_fixed_genus", 
+    fixed_effects = c("AUC", "Hormone"),
+    reference = c("Hormone,Saline")) # none signif -- deleted file
+
+grace_play_9_b_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_fixed_phylum", 
+    fixed_effects = c("AUC", "Hormone"),
+    reference = c("Hormone,Saline")) # none signif -- deleted file
+
+# order
+grace_play_9_b_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_fixed_order", 
+    fixed_effects = c("AUC", "Hormone"),
+    reference = c("Hormone,Saline")) # none signif -- clostridia really close p = 0.003 unadjusted
+
+# with hormone as a random effect
+grace_play_9_c_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_random_genus", 
+    fixed_effects = c("AUC"),
+    random_effects = c("Hormone")) # none signif -- deleted file
+
+grace_play_9_c_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_random_phylum", 
+    fixed_effects = c("AUC"),
+    random_effects = c("Hormone")) # none signif -- deleted file
+
+# order
+grace_play_9_c_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_random_order", 
+    fixed_effects = c("AUC"),
+    random_effects = c("Hormone")) # signif for clostridia and another random one
+
+# family
+grace_play_9_c_family = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = grace_play_9_meta, 
+    output = "Endpoint_ITT_AUC_all_hormones_random_family", 
+    fixed_effects = c("AUC"),
+    random_effects = c("Hormone")) # none signif -- deleted file
+
+```
+
+```{r grace play 6}
+# Echo data
+
+# use Echo_metadata_df_full to have Mouse_ID as a random effect (baseline to endpoint?)
+grace_play_10_meta <- filter(Echo_metadata_df_full, Antibiotics == "Non_ABX")
+
+# lean not accounting for Day or Hormone
+grace_play_10_a_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_lean_genus_a", 
+    fixed_effects = c("Lean_mass_percentage"),
+    random_effects = c("Mouse_ID")) ## all clostridiales, but coefficients go in dif directions so IDK
+
+grace_play_10_a_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_lean_phylum_a", 
+    fixed_effects = c("Lean_mass_percentage"),
+    random_effects = c("Mouse_ID")) # seems driven by outliers
+
+# lean accounting for Day as fixed IDK HOW TO INTERPRET THESE I GET CONFUSED! 
+grace_play_10_b_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_lean_genus_b", 
+    fixed_effects = c("Lean_mass_percentage", "Day"),
+    random_effects = c("Mouse_ID")) 
+
+grace_play_10_b_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_lean_phylum_b", 
+    fixed_effects = c("Lean_mass_percentage", "Day"),
+    random_effects = c("Mouse_ID"))
+
+# lean accounting for Day as random
+grace_play_10_c_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_lean_genus_c", 
+    fixed_effects = c("Lean_mass_percentage"),
+    random_effects = c("Mouse_ID", "Day")) 
+
+grace_play_10_c_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_lean_phylum_c", 
+    fixed_effects = c("Lean_mass_percentage"),
+    random_effects = c("Mouse_ID", "Day"))
+
+# lean accounting for Hormone as fixed just endpoint
+grace_play_10_meta_d <- filter(Echo_metadata_df_full, Antibiotics == "Non_ABX" & TimePoint == "Intervention")
+grace_play_10_d_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta_d, 
+    output = "Echo_lean_genus_d", 
+    fixed_effects = c("Lean_mass_percentage", "Hormone"),
+    reference = c("Hormone,Saline")) # no associations for just endpoint
+
+grace_play_10_d_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta_d, 
+    output = "Echo_lean_phylum_d", 
+    fixed_effects = c("Lean_mass_percentage", "Hormone"),
+    reference = c("Hormone,Saline")) # no associations for just endpoint
+
+grace_play_10_meta_e <- filter(Echo_metadata_df_full, Antibiotics == "Non_ABX" & TimePoint == "Intervention" & Hormone == "PGH")
+grace_play_10_e_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta_e, 
+    output = "Echo_lean_genus_e", 
+    fixed_effects = c("Lean_mass_percentage")) # no associations
+
+grace_play_10_e_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = grace_play_10_meta_e, 
+    output = "Echo_lean_order_e", 
+    fixed_effects = c("Lean_mass_percentage")) # no associations 
+
+# ALL ARE SIMILAR AND SHOWING INCREASE IN CLOSTRIDIALES WITH INCREASED LEAN MASS %, THE STATS JUST DIFFER BY WHAT YOU CONTROL FOR. 
+
+# FAT
+# fat not accounting for Day or Hormone
+grace_play_11_a_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_fat_genus_a", 
+    fixed_effects = c("Fat_percentage"),
+    random_effects = c("Mouse_ID")) # signif
+
+grace_play_11_a_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_fat_phylum_a", 
+    fixed_effects = c("Fat_percentage"),
+    random_effects = c("Mouse_ID")) # no signif phyla -- deleted file
+
+# fat accounting for Day as fixed IDK HOW TO INTERPRET THESE I GET CONFUSED! 
+grace_play_11_b_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_fat_genus_b", 
+    fixed_effects = c("Fat_percentage", "Day"),
+    random_effects = c("Mouse_ID")) # similar to above, with one more plot
+
+grace_play_11_b_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_fat_phylum_b", 
+    fixed_effects = c("Fat_percentage", "Day"),
+    random_effects = c("Mouse_ID")) # not telling much
+
+# fat accounting for Day as random
+grace_play_11_c_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_fat_genus_c", 
+    fixed_effects = c("Fat_percentage"),
+    random_effects = c("Mouse_ID", "Day")) # same two as others
+
+grace_play_11_c_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_fat_phylum_c", 
+    fixed_effects = c("Fat_percentage"),
+    random_effects = c("Mouse_ID", "Day")) # none signif -- deleting
+
+# fat accounting for Hormone as fixed just endpoint
+grace_play_10_meta_d <- filter(Echo_metadata_df_full, Antibiotics == "Non_ABX" & TimePoint == "Intervention")
+grace_play_11_d_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta_d, 
+    output = "Echo_fat_genus_d", 
+    fixed_effects = c("Fat_percentage", "Hormone"),
+    reference = c("Hormone,Saline")) # no associations for just endpoint
+
+grace_play_11_d_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = grace_play_10_meta_d, 
+    output = "Echo_fat_order_d", 
+    fixed_effects = c("Fat_percentage", "Hormone"),
+    reference = c("Hormone,Saline")) # no associations for just endpoint
+
+grace_play_11_d_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta_d, 
+    output = "Echo_fatphylum_d", 
+    fixed_effects = c("Fat_percentage", "Hormone"),
+    reference = c("Hormone,Saline")) # no associations for just endpoint
+
+# Total Water
+# fat not accounting for Day or Hormone
+grace_play_12_a_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_totalwater_genus_a", 
+    fixed_effects = c("Total_water_percentage"),
+    random_effects = c("Mouse_ID")) # a bunch signif -- all order clostridiales, but in dif directions
+
+grace_play_12_a_family = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_totalwater_family_a", 
+    fixed_effects = c("Total_water_percentage"),
+    random_effects = c("Mouse_ID")) # none signif, but several close
+
+# Free Water
+
+grace_play_13_a_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_freewater_genus_a", 
+    fixed_effects = c("Free_water_percentage"),
+    random_effects = c("Mouse_ID")) # a bunch signif
+
+grace_play_13_a_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta, 
+    output = "Echo_freewater_phylum_a", 
+    fixed_effects = c("Free_water_percentage"),
+    random_effects = c("Mouse_ID")) # one signif
+
+# interesting that free and total water seem to be so affected... 
+
+# What about if you have all of them as fixed effects and look for relationships between them? 
+
+# baseline and endpoint together
+grace_play_14_a_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta, 
+    output = "Body_comp_phylum_a", 
+    fixed_effects = c("Free_water_percentage", "Total_water_percentage", "Fat_percentage", "Lean_mass_percentage"),
+    random_effects = c("Mouse_ID")) # no associations!
+
+grace_play_14_a_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta, 
+    output = "Body_comp_genus_a", 
+    fixed_effects = c("Free_water_percentage", "Total_water_percentage", "Fat_percentage", "Lean_mass_percentage"),
+    random_effects = c("Mouse_ID")) # ok this has some stuff
+
+# just PL
+grace_play_14_meta_pl <- grace_play_10_meta %>% 
+  filter(Hormone == "PL")
+
+grace_play_14_c_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_14_meta_pl, 
+    output = "Body_comp_genus_c", 
+    fixed_effects = c("Free_water_percentage", "Total_water_percentage", "Fat_percentage", "Lean_mass_percentage"),
+    random_effects = c("Mouse_ID"))
+
+# just baseline all mice 
+grace_play_14_meta_baseline <- grace_play_10_meta %>% 
+  filter(TimePoint == "Baseline")
+
+grace_play_14_baseline_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_14_meta_baseline, 
+    output = "Body_comp_baseline_genus_c", 
+    fixed_effects = c("Free_water_percentage", "Total_water_percentage", "Fat_percentage", "Lean_mass_percentage")) # no associations
+
+grace_play_14_baseline_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_14_meta_baseline, 
+    output = "Body_comp_baseline_phylum", 
+    fixed_effects = c("Fat_percentage", "Lean_mass_percentage")) # no associations
+
+# just endpoint
+grace_play_14_b_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = grace_play_10_meta_d, 
+    output = "Body_comp_phylum_b_endpoint", 
+    fixed_effects = c("Fat_percentage", "Lean_mass_percentage"),
+    random_effects = c("Mouse_ID")) # no associations
+
+grace_play_14_b_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = grace_play_10_meta_d, 
+    output = "Body_comp_genus_b_endpoint", 
+    fixed_effects = c("Free_water_percentage", "Total_water_percentage", "Fat_percentage", "Lean_mass_percentage", "Hormone"),
+    random_effects = c("Mouse_ID"),
+    reference = c("Hormone,Saline")) # no associations at just endpoint
+
+```
+
+``` {r grace play weight}
+Weight_filtered <- Weight %>% 
+  filter(Day %in% c("D0", "D3", "D5", "D8"))
+
+Weight_filtered_abx <- Weight_filtered %>% 
+  filter(Antibiotics == "ABX")
+  
+Weight_filtered_nonabx <- Weight_filtered %>% 
+  filter(Antibiotics == "Non_ABX") %>% 
+  rename(Mouse_Num = Mouse) %>% 
+  mutate(Mouse_Num_Day = str_c(Mouse_Num, Day, sep = "_")) %>% 
+  select(Mouse_Num_Day, Weight_g)
+
+df_mouse_metadata_nonabx <- df_mouse_metadata %>% 
+  filter(Antibiotics == "Non_ABX", Day %in% c("D0", "D3", "D5", "D8")) %>% 
+  mutate(Mouse_Num_Day = str_c(Mouse_Num, Day, sep = "_")) %>% 
+  rownames_to_column(var = "Sample_ID") 
+
+# making the meta
+Weight_meta <- left_join(df_mouse_metadata_nonabx, Weight_filtered_nonabx, by = "Mouse_Num_Day") %>% 
+  column_to_rownames(var = "Sample_ID") # success! 
+
+# all mice, not considering hormone
+grace_play_15_a_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Weight_meta, 
+    output = "Weight_phylum_a", 
+    fixed_effects = c("Weight_g"),
+    random_effects = c("Mouse_ID")) # lots of associations!
+
+grace_play_15_a_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta, 
+    output = "Weight_genus_a", 
+    fixed_effects = c("Weight_g"),
+    random_effects = c("Mouse_ID"))
+
+# all mice, considering hormone as a fixed effect and day as a random effect
+grace_play_15_b_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Weight_meta, 
+    output = "Weight_phylum_b", 
+    fixed_effects = c("Weight_g", "Hormone", "Weight_g:Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline"))
+
+grace_play_15_b_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta, 
+    output = "Weight_genus_b", 
+    fixed_effects = c("Weight_g", "Hormone", "Weight_g:Hormone"),
+    random_effects = c("Mouse_ID", "Day"),
+    reference = c("Hormone,Saline")) ## interesting!
+
+# separating by hormone
+Weight_meta_PGH <- Weight_meta %>% 
+  filter(Hormone == "PGH")
+
+# PGH
+grace_play_15_c_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Weight_meta_PGH, 
+    output = "Weight_phylum_PGH", 
+    fixed_effects = c("Weight_g"),
+    random_effects = c("Mouse_ID", "Day")) # one signif
+
+grace_play_15_c_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta_PGH, 
+    output = "Weight_genus_PGH", 
+    fixed_effects = c("Weight_g"),
+    random_effects = c("Mouse_ID", "Day")) # a bunch signif
+
+  # what about day as fixed instead of random? Day_num
+# removing day 8
+Weight_meta_PGH_b <- Weight_meta_PGH %>% 
+  filter(Day != "D8")
+grace_play_15_c_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Weight_meta_PGH_b, 
+    output = "Weight_phylum_PGH_b", 
+    fixed_effects = c("Weight_g", "Day_Num"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_15_c_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta_PGH_b, 
+    output = "Weight_genus_PGH_b", 
+    fixed_effects = c("Weight_g", "Day_Num"),
+    random_effects = c("Mouse_ID")) # This is an interesting file!
+
+grace_play_15_c_fam = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = Weight_meta_PGH_b, 
+    output = "Weight_family_PGH_b", 
+    fixed_effects = c("Weight_g", "Day_Num"),
+    random_effects = c("Mouse_ID"))  
+
+# Can I color them?
+
+# PL weight variation
+Weight_meta_PL_b <- Weight_meta %>% 
+  filter(Hormone == "PL" & Day != "D8")
+
+grace_play_15_pl_weight_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta_PL_b, 
+    output = "Weight_genus_PL", 
+    fixed_effects = c("Weight_g"),
+    random_effects = c("Mouse_ID"))
+
+grace_play_15_pl_weight_genus_b = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta_PL_b, 
+    output = "Weight_genus_PL_b", 
+    fixed_effects = c("Weight_g", "Day_Num"),
+    random_effects = c("Mouse_ID")) # can I get heatmap? Yes but none of them correlate with each other
+
+```
+
+``` {r grace play back to just taxa longitudinally, no other meta}
+
+# PGH Days 0-3-5
+grace_play_15_PGH_long = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta_PGH_b, 
+    output = "PGH_genus_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID")) # lots of strong associations actually! 
+
+grace_play_15_PGH_long = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta_PGH_b, 
+    output = "PGH_genus_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID")) 
+
+grace_play_15_PGH_long_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Weight_meta_PGH_b, 
+    output = "PGH_phylum_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID")) 
+
+grace_play_15_PGH_long_c = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = Weight_meta_PGH_b, 
+    output = "PGH_class_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID")) 
+
+# PL Days 0-3-5
+
+grace_play_15_PL_long = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta_PL_b, 
+    output = "PL_genus_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID"))  # lots of strong associations actually! 
+
+grace_play_15_PL_long_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Weight_meta_PL_b, 
+    output = "PL_phylum_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID")) 
+
+grace_play_15_PL_long_c = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = Weight_meta_PL_b, 
+    output = "PL_class_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID")) 
+
+# Saline Days 0-3-5
+Weight_meta_Saline_b <- Weight_meta %>% 
+  filter(Hormone == "Saline" & Day != "D8")
+
+grace_play_15_Saline_long = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Weight_meta_Saline_b, 
+    output = "Saline_genus_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID")) # ok changes in saline longitudinally too tho, but not as many
+
+grace_play_15_Saline_long_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Weight_meta_Saline_b, 
+    output = "Saline_phylum_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID")) # no changes
+
+grace_play_15_Saline_long_c = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = Weight_meta_Saline_b, 
+    output = "Saline_class_longitduinally", 
+    fixed_effects = c("Day_Num"),
+    random_effects = c("Mouse_ID")) # one minor change
+
+
+# What about Saline vs PGH at Day 5?
+salinevspgh_meta <- df_mouse_metadata %>% 
+  filter(Hormone != "PL" & Day == "D8" & Antibiotics == "Non_ABX")
+
+grace_play_16_salinevspgh_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = salinevspgh_meta, 
+    output = "salinevspgh_genus_d8", 
+    fixed_effects = c("Hormone")) # d8 has differences but do we trust that? Stick do d5 i say
+
+# Day 8 version
+grace_play_16_salinevspgh_fam = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = salinevspgh_meta, 
+    output = "salinevspgh_family_longitduinally", 
+    fixed_effects = c("Hormone")) # still don't trust it... could be contam? but why just in PGH?
+```
+
+Seeing if I can look at changes in body composition in mice ("responders vs non-responders" and if that might correlate with either baseline or endpoint characteristics of their gut microbiome?)
+``` {r body comp changes1 }
+# Trying to make the change data frame from my old R doc
+baseline_data <- EchoMRI[EchoMRI$Timepoint == "Baseline", ]
+endpoint_data <- EchoMRI[EchoMRI$Timepoint == "Endpoint", ]
+
+# Merge the baseline and endpoint data by Mouse to ensure matching rows
+merged_data <- merge(baseline_data, endpoint_data, by = "Mouse", suffixes = c("_baseline", "_endpoint"))
+View(merged_data)
+# Calculate the absolute and relative percent changes for each metric
+change_in_body_comp <- data.frame(
+  Mouse = merged_data$Mouse,
+  
+  # Absolute percent changes
+  Abs_Change_Fat = merged_data$Fat_percentage_endpoint - merged_data$Fat_percentage_baseline,
+  Abs_Change_Lean_Mass = merged_data$Lean_mass_percentage_endpoint - merged_data$Lean_mass_percentage_baseline,
+  Abs_Change_Free_Water = merged_data$Free_water_percentage_endpoint - merged_data$Free_water_percentage_baseline,
+  Abs_Change_Total_Water = merged_data$Total_water_percentage_endpoint - merged_data$Total_water_percentage_baseline,
+  
+  # Relative percent changes
+  Rel_Change_Fat = (merged_data$Fat_percentage_endpoint - merged_data$Fat_percentage_baseline) / merged_data$Fat_percentage_baseline * 100,
+  Rel_Change_Lean_Mass = (merged_data$Lean_mass_percentage_endpoint - merged_data$Lean_mass_percentage_baseline) / merged_data$Lean_mass_percentage_baseline * 100,
+  Rel_Change_Free_Water = (merged_data$Free_water_percentage_endpoint - merged_data$Free_water_percentage_baseline) / merged_data$Free_water_percentage_baseline * 100,
+  Rel_Change_Total_Water = (merged_data$Total_water_percentage_endpoint - merged_data$Total_water_percentage_baseline) / merged_data$Total_water_percentage_baseline * 100
+)
+
+# check it out
+View(change_in_body_comp)
+change_in_body_comp <-  change_in_body_comp %>% 
+  rename(Mouse_Num = Mouse)
+
+# Ok cool now gotta merge this with meta data
+df_mouse_metadata_dmin3 <- df_mouse_metadata %>% 
+  filter(Day == "D-3") %>% 
+  rownames_to_column(var = "Sample_ID") 
+df_mouse_metadata_d0 <- df_mouse_metadata %>% 
+  filter(Day == "D0")%>% 
+  rownames_to_column(var = "Sample_ID") 
+df_mouse_metadata_d5 <- df_mouse_metadata %>% 
+  filter(Day == "D5")%>% 
+  rownames_to_column(var = "Sample_ID") 
+
+df_mouse_metadata_dmin3 <- df_mouse_metadata_dmin3 %>% 
+  rownames_to_column(var = "Sample_ID") 
+
+# making the meta 
+# d-3
+Perc_change_meta_dmin3 <- left_join(df_mouse_metadata_dmin3, change_in_body_comp, by = "Mouse_Num") %>% 
+  column_to_rownames(var = "Sample_ID")
+  # filtering to exclude abx
+    Perc_change_meta_dmin3 <- Perc_change_meta_dmin3 %>% 
+      filter(Antibiotics == "Non_ABX")
+
+# d0
+Perc_change_meta_d0 <- left_join(df_mouse_metadata_d0, change_in_body_comp, by = "Mouse_Num") %>% 
+  column_to_rownames(var = "Sample_ID")
+  # filtering to exclude abx
+    Perc_change_meta_d0 <- Perc_change_meta_d0 %>% 
+      filter(Antibiotics == "Non_ABX")
+
+# d5
+Perc_change_meta_d5 <- left_join(df_mouse_metadata_d5, change_in_body_comp, by = "Mouse_Num") %>% 
+  column_to_rownames(var = "Sample_ID")
+  # filtering to exclude abx
+    Perc_change_meta_d5 <- Perc_change_meta_d5 %>% 
+      filter(Antibiotics == "Non_ABX")
+
+# META DONE!
+    
+# Q1: Kind of a dumb question, but not considering hormone group, do baseline levels of any microbes correlate with how much fat or lean mass that mouse eventually changed by?
+    
+    # fat
+    # genus level
+    grace_play_17_Baseline_microbes_to_fat_change_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_dmin3, 
+    output = "Baseline_microbes_to_fat_change_genus", 
+    fixed_effects = c("Abs_Change_Fat")) # no lol
+    
+    # phylum level
+    grace_play_17_Baseline_microbes_to_fat_change_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_dmin3, 
+    output = "Baseline_microbes_to_fat_change_phylum", 
+    fixed_effects = c("Abs_Change_Fat")) # yes tenericutes
+    
+    grace_play_17_Baseline_microbes_to_fat_change_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_dmin3, 
+    output = "Baseline_microbes_to_fat_change_phylum_controlledforhormone", 
+    fixed_effects = c("Abs_Change_Fat"),
+    random_effects = c("Hormone")) # but not when u control for hormone 
+    
+    # class level
+    grace_play_17_Baseline_microbes_to_fat_change_class = Maaslin2(
+    input_data = mouse_3_class, 
+    input_metadata = Perc_change_meta_dmin3, 
+    output = "Baseline_microbes_to_fat_change_class", 
+    fixed_effects = c("Abs_Change_Fat")) # no -- deleting file
+    
+    # order level
+    grace_play_17_Baseline_microbes_to_fat_change_order = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = Perc_change_meta_dmin3, 
+    output = "Baseline_microbes_to_fat_change_order", 
+    fixed_effects = c("Abs_Change_Fat")) # no -- deleting file
+    
+    # family level
+    grace_play_17_Baseline_microbes_to_fat_change_family = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = Perc_change_meta_dmin3, 
+    output = "Baseline_microbes_to_fat_change_family", 
+    fixed_effects = c("Abs_Change_Fat")) # no-- deleting file
+    
+    # lean mass
+    # genus level
+    grace_play_17_Baseline_microbes_to_lean_change_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_dmin3, 
+    output = "Baseline_microbes_to_lean_change_genus", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # oh yes lots
+    
+    # hormone as random effect
+     grace_play_17_Baseline_microbes_to_lean_change_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_dmin3, 
+    output = "Baseline_microbes_to_lean_change_genus_controlledforhormone", 
+    fixed_effects = c("Abs_Change_Lean_Mass"),
+    random_effects = c("Hormone")) # now none
+    
+    # phylum level
+    grace_play_17_Baseline_microbes_to_lean_change_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_dmin3, 
+    output = "Baseline_microbes_to_lean_change_phylum_controlledforhormone", 
+    fixed_effects = c("Abs_Change_Lean_Mass"),
+    random_effects = c("Hormone")) # now none 
+    
+    # but this is baseline microbiome compositions...? 
+
+```
+
+Ok now this is low power because its n = 6 per group, but can try looking at within-group changes
+3 groups x 3 time points x 4 metrics = 36 analyses. will start with just genus, order, and phylum? so 108 total...
+``` {r body comp changes 2}
+Perc_change_meta_d5_PGH <- Perc_change_meta_d5 %>% 
+  filter(Hormone == "PGH")
+
+# PGH D5 
+    # LEAN
+PGH_d5_lean_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_lean_g", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # boring deleted file
+
+# try fam and order? 
+PGH_d5_lean_f = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_lean_f", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # nothin. delete. Lactobacillaceae close tho (coef 1.5, unadjusted p = 0.01)
+
+PGH_d5_lean_0 = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_lean_o", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # nothin. delete. Lactobacillales close tho (coef 1.5, unadjusted p = 0.01)
+
+
+PGH_d5_lean_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_lean_p", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # boring deleted file
+    
+    # FAT -- dont test others. bad p vals
+PGH_d5_lean_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_fat_g", 
+    fixed_effects = c("Abs_Change_Fat")) # boring deleted file
+
+PGH_d5_lean_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_fat_p", 
+    fixed_effects = c("Abs_Change_Fat")) # boring deleted file
+
+    # TOTAL WATER
+PGH_d5_twater_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_twater_g", 
+    fixed_effects = c("Abs_Change_Total_Water"))
+
+# try fam and order? 
+PGH_d5_twater_f = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_twater_f", 
+    fixed_effects = c("Abs_Change_Total_Water")) # nothin. delete. Lactobacillaceae closest tho (coef 1.3, unadjusted p = 0.05)
+
+PGH_d5_twater_o = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_twater_o", 
+    fixed_effects = c("Abs_Change_Total_Water")) # nothin. delete. 
+
+PGH_d5_twater_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_twater_p", 
+    fixed_effects = c("Abs_Change_Total_Water")) # boring deleted file
+
+    # FREE WATER
+PGH_d5_fwater_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_fwater_g", 
+    fixed_effects = c("Abs_Change_Free_Water"))  # boring deleted file
+
+PGH_d5_fwater_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_PGH, 
+    output = "PGH_d5_fwater_p", 
+    fixed_effects = c("Abs_Change_Free_Water")) # boring deleted file
+
+# PL D5
+Perc_change_meta_d5_PL <- Perc_change_meta_d5 %>% 
+  filter(Hormone == "PL")
+    # LEAN
+PL_d5_lean_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_lean_g", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # boring deleted file
+
+PL_d5_lean_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_lean_p", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # boring deleted file
+    
+    # FAT
+PL_d5_lean_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_fat_g", 
+    fixed_effects = c("Abs_Change_Fat")) # boring deleted file
+
+PL_d5_lean_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_fat_p", 
+    fixed_effects = c("Abs_Change_Fat")) # boring deleted file
+
+    # TOTAL WATER
+PL_d5_twater_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_twater_g", 
+    fixed_effects = c("Abs_Change_Total_Water")) # boring deleted file
+
+PL_d5_twater_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_twater_p", 
+    fixed_effects = c("Abs_Change_Total_Water")) # boring deleted file
+
+    # FREE WATER
+PL_d5_fwater_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_fwater_g", 
+    fixed_effects = c("Abs_Change_Free_Water")) # stuff! the ones that lost more free water from baseline to endpoint also had higher endpoint levels of this:
+# k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Veillonellaceae.g__Dialister ok???
+
+# fam
+PL_d5_fwater_f = Maaslin2(
+    input_data = mouse_5_family, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_fwater_f", 
+    fixed_effects = c("Abs_Change_Free_Water")) # same thing: fam Veillonellaceae
+
+# order
+PL_d5_fwater_o = Maaslin2(
+    input_data = mouse_4_order, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_fwater_o", 
+    fixed_effects = c("Abs_Change_Free_Water")) # boring deleted file
+
+PL_d5_fwater_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_PL, 
+    output = "PL_d5_fwater_p", 
+    fixed_effects = c("Abs_Change_Free_Water")) # boring deleted file
+
+# Saline D5
+Perc_change_meta_d5_Saline <- Perc_change_meta_d5 %>% 
+  filter(Hormone == "Saline")
+    # LEAN
+Saline_d5_lean_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_Saline, 
+    output = "Saline_d5_lean_g", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # boring deleted file
+
+Saline_d5_lean_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_Saline, 
+    output = "Saline_d5_lean_p", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # boring deleted file
+    
+    # FAT
+Saline_d5_lean_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_Saline, 
+    output = "Saline_d5_fat_g", 
+    fixed_effects = c("Abs_Change_Fat")) # boring deleted file
+
+Saline_d5_lean_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_Saline, 
+    output = "Saline_d5_fat_p", 
+    fixed_effects = c("Abs_Change_Fat")) # boring deleted file
+
+    # TOTAL WATER
+Saline_d5_twater_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_Saline, 
+    output = "Saline_d5_twater_g", 
+    fixed_effects = c("Abs_Change_Total_Water")) # boring deleted file
+
+Saline_d5_twater_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_Saline, 
+    output = "Saline_d5_twater_p", 
+    fixed_effects = c("Abs_Change_Total_Water")) # boring deleted file
+
+    # FREE WATER
+Saline_d5_fwater_g = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5_Saline, 
+    output = "Saline_d5_fwater_g", 
+    fixed_effects = c("Abs_Change_Free_Water"))
+# signif for this guy: 
+# p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Lactobacillaceae.g__
+# those that ended up with more at endoint increased their free water retention. 
+
+Saline_d5_fwater_p = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5_Saline, 
+    output = "Saline_d5_fwater_p", 
+    fixed_effects = c("Abs_Change_Free_Water"))
+
+```
+But none of those are that interesting because if it increased in all of the mice within a group, there won't be enough variation to detect. I want to see changes in taxonomic composition from D-3 to D5 coupled with the changes in body composition. But that might be too tricky to do within maaslin.  
+
+``` {r}
+# What about if I did D5 gut composition in all mice and their changes in each of the categories? Without hormone as an effect? And then tried to color by hormone group. I think that would be best. 
+
+# fat
+    # genus level
+    grace_play_17_Baseline_microbes_to_fat_change_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5, 
+    output = "D5_microbes_to_fat_change_genus", 
+    fixed_effects = c("Abs_Change_Fat")) # none -- deleting
+    
+    # phylum level
+    grace_play_17_Baseline_microbes_to_fat_change_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5, 
+    output = "D5_microbes_to_fat_change_phylum", 
+    fixed_effects = c("Abs_Change_Fat")) # none -- deleting
+    
+    # hormone control
+    grace_play_17_Baseline_microbes_to_fat_change_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5, 
+    output = "D5_microbes_to_fat_change_phylum_controlledforhormone", 
+    fixed_effects = c("Abs_Change_Fat"),
+    random_effects = c("Hormone")) # none -- deleting
+
+    
+# lean mass
+    # genus level
+    grace_play_17_Baseline_microbes_to_lean_change_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5, 
+    output = "D5_microbes_to_lean_change_genus", 
+    fixed_effects = c("Abs_Change_Lean_Mass")) # none -- deleting
+    
+    # hormone as random effect
+    grace_play_17_Baseline_microbes_to_lean_change_genus = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5, 
+    output = "D5_microbes_to_lean_change_genus_controlledforhormone", 
+    fixed_effects = c("Abs_Change_Lean_Mass"),
+    random_effects = c("Hormone")) # none -- deleting
+    
+    # hormone as fixed effect without interaction
+    grace_play_17_Baseline_microbes_to_lean_change_genus_b = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5, 
+    output = "D5_microbes_to_lean_change_genus_controlledforhormone_b", 
+    fixed_effects = c("Abs_Change_Lean_Mass", "Hormone"),
+    reference = c("Hormone,Saline")) # none -- deleting
+    
+    # hormone as fixed effect with interaction
+    grace_play_17_Baseline_microbes_to_lean_change_genus_c = Maaslin2(
+    input_data = mouse_6_genus, 
+    input_metadata = Perc_change_meta_d5, 
+    output = "D5_microbes_to_lean_change_genus_controlledforhormone_c", 
+    fixed_effects = c("Abs_Change_Lean_Mass", "Hormone", "Abs_Change_Lean_Mass:Hormone"),
+    reference = c("Hormone,Saline")) # none -- deleting
+    
+    # phylum level
+    grace_play_17_Baseline_microbes_to_lean_change_phylum = Maaslin2(
+    input_data = mouse_2_phylum, 
+    input_metadata = Perc_change_meta_d5, 
+    output = "D5_microbes_to_lean_change_phylum_controlledforhormone", 
+    fixed_effects = c("Abs_Change_Lean_Mass"),
+    random_effects = c("Hormone"))  # none -- deleting
+    
+```
+
+What about change in body mass from D-3 (or D0) to D5 or D8 vs taxonomy? Like in laura's pic
