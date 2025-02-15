@@ -1,0 +1,4 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Veillonellaceae.g__Megamonas	Time_0	Time_0	-0.447290131737008	0.124630195502745	18	3	0.00249646680974178	0.202213811589084
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__Clostridium	Time_0	Time_0	0.815333649169556	0.266201954100584	18	17	0.007696401046592	0.237760724634548
+k__Bacteria.p__Actinobacteria.c__Coriobacteriia.o__Coriobacteriales.f__Coriobacteriaceae.g__	Time_0	Time_0	0.597274662021444	0.200301175132725	18	9	0.00880595276424253	0.237760724634548
