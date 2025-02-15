@@ -1,0 +1,72 @@
+2024-12-02 10:55:57.452589 INFO::Writing function arguments to log file
+2024-12-02 10:55:57.453126 DEBUG::Function arguments
+2024-12-02 10:55:57.453312 DEBUG::Output folder: PGH_Long_order_no_d8
+2024-12-02 10:55:57.453452 DEBUG::Min Abundance: 0.000000
+2024-12-02 10:55:57.453589 DEBUG::Min Prevalence: 0.100000
+2024-12-02 10:55:57.453716 DEBUG::Normalization: TSS
+2024-12-02 10:55:57.45384 DEBUG::Transform: LOG
+2024-12-02 10:55:57.453967 DEBUG::Analysis method: LM
+2024-12-02 10:55:57.454092 DEBUG::Max significance: 0.250000
+2024-12-02 10:55:57.454229 DEBUG::Random effects: Mouse_ID
+2024-12-02 10:55:57.454355 DEBUG::Fixed effects: Day_Num
+2024-12-02 10:55:57.454483 DEBUG::Correction method: BH
+2024-12-02 10:55:57.454612 DEBUG::Standardize: TRUE
+2024-12-02 10:55:57.454739 DEBUG::Cores: 1
+2024-12-02 10:55:57.454867 INFO::Verifying options selected are valid
+2024-12-02 10:55:57.455244 INFO::Determining format of input files
+2024-12-02 10:55:57.455643 INFO::Input format is data samples as rows and metadata samples as rows
+2024-12-02 10:55:57.456514 DEBUG::The following samples were found to have features but no metadata. They will be removed. HEB24007,HEB24008,HEB24009,HEB24010,HEB24011,HEB24012,HEB24013,HEB24014,HEB24015,HEB24017,HEB24018,HEB24019,HEB24020,HEB24021,HEB24022,HEB24024,HEB24026,HEB24027,HEB24028,HEB24029,HEB24030,HEB24031,HEB24032,HEB24033,HEB24035,HEB24036,HEB24038,HEB24039,HEB24040,HEB24041,HEB24042,HEB24043,HEB24045,HEB24046,HEB24047,HEB24048,HEB24049,HEB24050,HEB24051,HEB24052,HEB24053,HEB24054,HEB24055,HEB24056,HEB24057,HEB24058,HEB24060,HEB24061,HEB24062,HEB24063,HEB24064,HEB24065,HEB24066,HEB24067,HEB24068,HEB24069,HEB24070,HEB24071,HEB24072,HEB24073,HEB24074,HEB24075,HEB24076,HEB24077,HEB24078,HEB24079,HEB24080,HEB24082,HEB24083,HEB24084,HEB24085,HEB24086,HEB24087,HEB24088,HEB24089,HEB24090,HEB24091,HEB24092,HEB24093,HEB24094,HEB24095,HEB24096,HEB24097,HEB24098,HEB24099,HEB24100,HEB24101,HEB24102,HEB24103,HEB24104,HEB24105,HEB24107,HEB24108,HEB24109,HEB24111,HEB24112,HEB24114,HEB24115,HEB24116,HEB24117,HEB24118,HEB24119,HEB24120,HEB24121,HEB24123,HEB24124,HEB24125,HEB24126,HEB24127,HEB24128,HEB24129,HEB24130,HEB24131,HEB24132,HEB24139,HEB24140,HEB24141,HEB24142,HEB24143,HEB24144,HEB24145,HEB24146,HEB24147,HEB24148,HEB24149,HEB24150,HEB24151,HEB24152,HEB24153,HEB24154,HEB24155,HEB24156,HEB24157,HEB24158,HEB24159,HEB24160,HEB24161,HEB24162,HEB24163,HEB24164,HEB24165,HEB24166,HEB24167,HEB24168,HEB24169,HEB24170,HEB24171,HEB24172,HEB24173,HEB24174,HEB24175,HEB24176,HEB24177,HEB24178,HEB24179,HEB24180,HEB24181,HEB24182,HEB24183,HEB24184,HEB24185,HEB24186,HEB24187,HEB24188,HEB24189,HEB24190,HEB24191,HEB24192,HEB24193,HEB24194,HEB24195,HEB24196,HEB24197,HEB24198
+2024-12-02 10:55:57.456777 DEBUG::A total of 24 samples were found in both the data and metadata
+2024-12-02 10:55:57.456931 DEBUG::Reordering data/metadata to use same sample ordering
+2024-12-02 10:55:57.457366 INFO::Formula for random effects: expr ~ (1 | Mouse_ID)
+2024-12-02 10:55:57.457779 INFO::Formula for fixed effects: expr ~  Day_Num
+2024-12-02 10:55:57.458176 INFO::Filter data based on min abundance and min prevalence
+2024-12-02 10:55:57.458519 INFO::Total samples in data: 24
+2024-12-02 10:55:57.458841 INFO::Min samples required with min abundance for a feature not to be filtered: 2.400000
+2024-12-02 10:55:57.459439 INFO::Total filtered features: 22
+2024-12-02 10:55:57.459809 INFO::Filtered feature names from abundance and prevalence filtering: k__Archaea.p__Euryarchaeota.c__Halobacteria.o__Halobacteriales, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.__, k__Bacteria.p__Firmicutes.c__Bacilli.__, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.__, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Caulobacterales, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__, k__Bacteria.p__Firmicutes.c__Clostridia.o__, k__Bacteria.p__Firmicutes.c__Clostridia.o__Natranaerobiales, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Alteromonadales, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Cardiobacteriales, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Sphingomonadales, k__Bacteria.p__Chloroflexi.c__Thermomicrobia.o__JG30.KF.CM45, k__Bacteria.p__Proteobacteria.c__Epsilonproteobacteria.o__Campylobacterales, k__Bacteria.p__Bacteroidetes.c__Flavobacteriia.o__Flavobacteriales, k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__MKC10, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhodospirillales, k__Bacteria.p__Spirochaetes.c__Spirochaetes.o__Spirochaetales, k__Bacteria.p__Actinobacteria.c__Thermoleophilia.__, k__Bacteria.p__.Thermi..c__Deinococci.o__Thermales, k__Bacteria.p__Verrucomicrobia.__.__, k__Bacteria.p__Proteobacteria.c__Deltaproteobacteria.o__Myxococcales, k__Bacteria.p__Actinobacteria.__.__
+2024-12-02 10:55:57.460497 INFO::Total filtered features with variance filtering: 0
+2024-12-02 10:55:57.460852 INFO::Filtered feature names from variance filtering:
+2024-12-02 10:55:57.461163 INFO::Running selected normalization method: TSS
+2024-12-02 10:55:57.461731 INFO::Applying z-score to standardize continuous metadata
+2024-12-02 10:55:57.46381 INFO::Running selected transform method: LOG
+2024-12-02 10:55:57.464414 INFO::Running selected analysis method: LM
+2024-12-02 10:55:57.465088 INFO::Fitting model to feature number 1, k__Bacteria.p__Bacteroidetes.c__Bacteroidia.o__Bacteroidales
+2024-12-02 10:55:57.487031 INFO::Fitting model to feature number 2, k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales
+2024-12-02 10:55:57.50312 INFO::Fitting model to feature number 3, k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales
+2024-12-02 10:55:57.519277 INFO::Fitting model to feature number 4, k__Bacteria.p__Firmicutes.c__Bacilli.o__Turicibacterales
+2024-12-02 10:55:57.534889 INFO::Fitting model to feature number 5, k__Bacteria.p__Verrucomicrobia.c__Verrucomicrobiae.o__Verrucomicrobiales
+2024-12-02 10:55:57.55178 INFO::Fitting model to feature number 6, k__Bacteria.__.__.__
+2024-12-02 10:55:57.568291 INFO::Fitting model to feature number 7, k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales
+2024-12-02 10:55:57.584038 INFO::Fitting model to feature number 8, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Enterobacteriales
+2024-12-02 10:55:57.599739 INFO::Fitting model to feature number 9, k__Bacteria.p__Cyanobacteria.c__Chloroplast.o__Streptophyta
+2024-12-02 10:55:57.618102 INFO::Fitting model to feature number 10, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rickettsiales
+2024-12-02 10:55:57.634865 INFO::Fitting model to feature number 11, k__Bacteria.p__Firmicutes.c__Erysipelotrichi.o__Erysipelotrichales
+2024-12-02 10:55:57.650599 INFO::Fitting model to feature number 12, k__Bacteria.p__Firmicutes.c__Clostridia.__
+2024-12-02 10:55:57.666494 INFO::Fitting model to feature number 13, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pseudomonadales
+2024-12-02 10:55:57.682324 INFO::Fitting model to feature number 14, k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Actinomycetales
+2024-12-02 10:55:57.697902 INFO::Fitting model to feature number 15, k__Bacteria.p__Tenericutes.c__Mollicutes.o__RF39
+2024-12-02 10:55:57.713768 INFO::Fitting model to feature number 16, k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Bifidobacteriales
+2024-12-02 10:55:57.729068 INFO::Fitting model to feature number 17, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__RF32
+2024-12-02 10:55:57.744858 INFO::Fitting model to feature number 18, k__Bacteria.p__Firmicutes.__.__
+2024-12-02 10:55:57.770792 INFO::Fitting model to feature number 19, k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales
+2024-12-02 10:55:57.791872 INFO::Fitting model to feature number 20, k__Bacteria.p__Deferribacteres.c__Deferribacteres.o__Deferribacterales
+2024-12-02 10:55:57.808089 INFO::Fitting model to feature number 21, Unassigned.__.__.__
+2024-12-02 10:55:57.823791 INFO::Fitting model to feature number 22, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Xanthomonadales
+2024-12-02 10:55:57.839244 INFO::Fitting model to feature number 23, k__Bacteria.p__Bacteroidetes.__.__
+2024-12-02 10:55:57.854833 INFO::Fitting model to feature number 24, k__Bacteria.p__Actinobacteria.c__Actinobacteria.__
+2024-12-02 10:55:57.870043 INFO::Fitting model to feature number 25, k__Bacteria.p__Actinobacteria.c__Coriobacteriia.o__Coriobacteriales
+2024-12-02 10:55:57.885487 INFO::Fitting model to feature number 26, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhizobiales
+2024-12-02 10:55:57.900843 INFO::Fitting model to feature number 27, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales
+2024-12-02 10:55:57.916958 INFO::Fitting model to feature number 28, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhodobacterales
+2024-12-02 10:55:57.938235 INFO::Counting total values for each feature
+2024-12-02 10:55:57.939717 INFO::Writing filtered data to file PGH_Long_order_no_d8/features/filtered_data.tsv
+2024-12-02 10:55:57.940921 INFO::Writing filtered, normalized data to file PGH_Long_order_no_d8/features/filtered_data_norm.tsv
+2024-12-02 10:55:57.942186 INFO::Writing filtered, normalized, transformed data to file PGH_Long_order_no_d8/features/filtered_data_norm_transformed.tsv
+2024-12-02 10:55:57.943474 INFO::Writing residuals to file PGH_Long_order_no_d8/fits/residuals.rds
+2024-12-02 10:55:57.944484 INFO::Writing fitted values to file PGH_Long_order_no_d8/fits/fitted.rds
+2024-12-02 10:55:57.945235 INFO::Writing extracted random effects to file PGH_Long_order_no_d8/fits/ranef.rds
+2024-12-02 10:55:57.945788 INFO::Writing all results to file (ordered by increasing q-values): PGH_Long_order_no_d8/all_results.tsv
+2024-12-02 10:55:57.946647 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): PGH_Long_order_no_d8/significant_results.tsv
+2024-12-02 10:55:57.947165 INFO::Writing heatmap of significant results to file: PGH_Long_order_no_d8/heatmap.pdf
+2024-12-02 10:55:57.947756 INFO::Writing association plots (one for each significant association) to output folder: PGH_Long_order_no_d8
