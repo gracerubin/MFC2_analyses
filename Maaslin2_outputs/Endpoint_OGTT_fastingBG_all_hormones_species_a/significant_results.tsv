@@ -1,0 +1,5 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Verrucomicrobia.c__Verrucomicrobiae.o__Verrucomicrobiales.f__Verrucomicrobiaceae.g__Akkermansia.s__muciniphila	Time_0	Time_0	0.872341335340854	0.36320885250357	18	18	0.0288180277282102	0.751073856477577
+k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Enterobacteriales.f__Enterobacteriaceae.g__Plesiomonas.s__shigelloides	Time_0	Time_0	0.164666580898359	0.0712720850280037	18	2	0.0345321313323024	0.751073856477577
+k__Bacteria.p__Actinobacteria.c__Coriobacteriia.o__Coriobacteriales.f__Coriobacteriaceae.g__.s__	Time_0	Time_0	0.597274709594694	0.200301889653102	18	9	0.00880614363656877	0.751073856477577
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Veillonellaceae.g__Megamonas.s__	Time_0	Time_0	-0.332485026036565	0.127465635727028	18	3	0.0190123921392342	0.751073856477577
