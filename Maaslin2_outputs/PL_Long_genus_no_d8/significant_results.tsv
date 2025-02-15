@@ -1,0 +1,7 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Lactobacillaceae.g__	Day_Num	Day_Num	-0.936327571717251	0.311554728832525	24	24	0.0079635188816219	0.17562023601653
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Lactobacillaceae.g__Lactobacillus	Day_Num	Day_Num	-0.136296823298267	0.0473657704403642	24	24	0.0104479117981975	0.17562023601653
+k__Bacteria.p__Firmicutes.c__Erysipelotrichi.o__Erysipelotrichales.f__Erysipelotrichaceae.__	Day_Num	Day_Num	-0.272152665178703	0.0767631248744329	24	24	0.00248697516879774	0.17562023601653
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Lachnospiraceae.g__	Day_Num	Day_Num	-0.457833789397854	0.163392786813696	24	24	0.0122525746058044	0.17562023601653
+k__Bacteria.p__Firmicutes.c__Erysipelotrichi.o__Erysipelotrichales.f__Erysipelotrichaceae.g__Catenibacterium	Day_Num	Day_Num	-0.26356412797689	0.0964786465048749	24	24	0.0121750572995947	0.17562023601653
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Lactobacillaceae.__	Day_Num	Day_Num	-0.374406882009468	0.123479646156901	24	4	0.00752089522668321	0.17562023601653

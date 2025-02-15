@@ -1,0 +1,67 @@
+2024-12-02 10:41:53.236219 INFO::Writing function arguments to log file
+2024-12-02 10:41:53.236765 DEBUG::Function arguments
+2024-12-02 10:41:53.236918 DEBUG::Output folder: PL_Long_phylum_no_d8
+2024-12-02 10:41:53.237043 DEBUG::Min Abundance: 0.000000
+2024-12-02 10:41:53.237161 DEBUG::Min Prevalence: 0.100000
+2024-12-02 10:41:53.237275 DEBUG::Normalization: TSS
+2024-12-02 10:41:53.237392 DEBUG::Transform: LOG
+2024-12-02 10:41:53.237509 DEBUG::Analysis method: LM
+2024-12-02 10:41:53.237619 DEBUG::Max significance: 0.250000
+2024-12-02 10:41:53.237738 DEBUG::Random effects: Mouse_ID
+2024-12-02 10:41:53.237852 DEBUG::Fixed effects: Day_Num
+2024-12-02 10:41:53.237968 DEBUG::Correction method: BH
+2024-12-02 10:41:53.238079 DEBUG::Standardize: TRUE
+2024-12-02 10:41:53.238192 DEBUG::Cores: 1
+2024-12-02 10:41:53.238302 INFO::Verifying options selected are valid
+2024-12-02 10:41:53.238648 INFO::Determining format of input files
+2024-12-02 10:41:53.238981 INFO::Input format is data samples as rows and metadata samples as rows
+2024-12-02 10:41:53.23939 DEBUG::The following samples were found to have features but no metadata. They will be removed. HEB24001,HEB24002,HEB24003,HEB24004,HEB24005,HEB24006,HEB24009,HEB24011,HEB24012,HEB24013,HEB24014,HEB24015,HEB24016,HEB24018,HEB24019,HEB24020,HEB24021,HEB24022,HEB24023,HEB24024,HEB24025,HEB24026,HEB24027,HEB24028,HEB24029,HEB24030,HEB24031,HEB24032,HEB24033,HEB24034,HEB24035,HEB24036,HEB24037,HEB24038,HEB24039,HEB24041,HEB24043,HEB24044,HEB24045,HEB24046,HEB24047,HEB24048,HEB24049,HEB24050,HEB24051,HEB24052,HEB24053,HEB24054,HEB24055,HEB24056,HEB24057,HEB24059,HEB24060,HEB24061,HEB24062,HEB24063,HEB24064,HEB24066,HEB24068,HEB24069,HEB24070,HEB24071,HEB24072,HEB24073,HEB24074,HEB24075,HEB24076,HEB24077,HEB24078,HEB24079,HEB24080,HEB24081,HEB24082,HEB24083,HEB24084,HEB24085,HEB24086,HEB24087,HEB24089,HEB24091,HEB24092,HEB24093,HEB24094,HEB24095,HEB24096,HEB24101,HEB24102,HEB24103,HEB24104,HEB24105,HEB24106,HEB24107,HEB24108,HEB24109,HEB24110,HEB24112,HEB24113,HEB24114,HEB24115,HEB24116,HEB24117,HEB24118,HEB24119,HEB24121,HEB24122,HEB24124,HEB24125,HEB24126,HEB24127,HEB24128,HEB24129,HEB24130,HEB24131,HEB24132,HEB24133,HEB24134,HEB24135,HEB24136,HEB24137,HEB24138,HEB24145,HEB24146,HEB24147,HEB24148,HEB24149,HEB24150,HEB24151,HEB24152,HEB24153,HEB24154,HEB24155,HEB24156,HEB24157,HEB24158,HEB24159,HEB24160,HEB24161,HEB24162,HEB24163,HEB24164,HEB24165,HEB24166,HEB24167,HEB24168,HEB24169,HEB24170,HEB24171,HEB24172,HEB24173,HEB24174,HEB24175,HEB24176,HEB24177,HEB24178,HEB24179,HEB24180,HEB24181,HEB24182,HEB24183,HEB24184,HEB24185,HEB24186,HEB24187,HEB24188,HEB24189,HEB24190,HEB24191,HEB24192,HEB24193,HEB24194,HEB24195,HEB24196,HEB24197,HEB24198
+2024-12-02 10:41:53.239556 DEBUG::A total of 24 samples were found in both the data and metadata
+2024-12-02 10:41:53.239672 DEBUG::Reordering data/metadata to use same sample ordering
+2024-12-02 10:41:53.239969 INFO::Formula for random effects: expr ~ (1 | Mouse_ID)
+2024-12-02 10:41:53.240326 INFO::Formula for fixed effects: expr ~  Day_Num
+2024-12-02 10:41:53.240654 INFO::Filter data based on min abundance and min prevalence
+2024-12-02 10:41:53.240947 INFO::Total samples in data: 24
+2024-12-02 10:41:53.241238 INFO::Min samples required with min abundance for a feature not to be filtered: 2.400000
+2024-12-02 10:41:53.241651 INFO::Total filtered features: 4
+2024-12-02 10:41:53.241965 INFO::Filtered feature names from abundance and prevalence filtering: k__Archaea.p__Euryarchaeota, k__Bacteria.p__Chloroflexi, k__Bacteria.p__Spirochaetes, k__Bacteria.p__.Thermi.
+2024-12-02 10:41:53.242452 INFO::Total filtered features with variance filtering: 0
+2024-12-02 10:41:53.242772 INFO::Filtered feature names from variance filtering:
+2024-12-02 10:41:53.243096 INFO::Running selected normalization method: TSS
+2024-12-02 10:41:53.2436 INFO::Applying z-score to standardize continuous metadata
+2024-12-02 10:41:53.245441 INFO::Running selected transform method: LOG
+2024-12-02 10:41:53.245963 INFO::Running selected analysis method: LM
+2024-12-02 10:41:53.246685 INFO::Fitting model to feature number 1, k__Bacteria.p__Bacteroidetes
+2024-12-02 10:41:53.265228 INFO::Fitting model to feature number 2, k__Bacteria.p__Firmicutes
+2024-12-02 10:41:53.280871 INFO::Fitting model to feature number 3, k__Bacteria.p__Verrucomicrobia
+2024-12-02 10:41:53.296873 INFO::Fitting model to feature number 4, k__Bacteria.__
+2024-12-02 10:41:53.312261 INFO::Fitting model to feature number 5, k__Bacteria.p__Proteobacteria
+2024-12-02 10:41:53.327967 INFO::Fitting model to feature number 6, k__Bacteria.p__Cyanobacteria
+2024-12-02 10:41:53.343786 INFO::Fitting model to feature number 7, k__Bacteria.p__Actinobacteria
+2024-12-02 10:41:53.359649 INFO::Fitting model to feature number 8, k__Bacteria.p__Tenericutes
+2024-12-02 10:41:53.376028 INFO::Fitting model to feature number 9, k__Bacteria.p__Deferribacteres
+2024-12-02 10:41:53.391848 INFO::Fitting model to feature number 10, Unassigned.__
+2024-12-02 10:41:53.408658 INFO::Counting total values for each feature
+2024-12-02 10:41:53.409509 INFO::Writing filtered data to file PL_Long_phylum_no_d8/features/filtered_data.tsv
+2024-12-02 10:41:53.410262 INFO::Writing filtered, normalized data to file PL_Long_phylum_no_d8/features/filtered_data_norm.tsv
+2024-12-02 10:41:53.4115 INFO::Writing filtered, normalized, transformed data to file PL_Long_phylum_no_d8/features/filtered_data_norm_transformed.tsv
+2024-12-02 10:41:53.412369 WARNING::Deleting existing residuals file: PL_Long_phylum_no_d8/fits/residuals.rds
+2024-12-02 10:41:53.413062 INFO::Writing residuals to file PL_Long_phylum_no_d8/fits/residuals.rds
+2024-12-02 10:41:53.413602 WARNING::Deleting existing fitted file: PL_Long_phylum_no_d8/fits/fitted.rds
+2024-12-02 10:41:53.414104 INFO::Writing fitted values to file PL_Long_phylum_no_d8/fits/fitted.rds
+2024-12-02 10:41:53.414599 WARNING::Deleting existing ranef file: PL_Long_phylum_no_d8/fits/ranef.rds
+2024-12-02 10:41:53.415057 INFO::Writing extracted random effects to file PL_Long_phylum_no_d8/fits/ranef.rds
+2024-12-02 10:41:53.415507 INFO::Writing all results to file (ordered by increasing q-values): PL_Long_phylum_no_d8/all_results.tsv
+2024-12-02 10:41:53.416206 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): PL_Long_phylum_no_d8/significant_results.tsv
+2024-12-02 10:41:53.416711 INFO::Writing heatmap of significant results to file: PL_Long_phylum_no_d8/heatmap.pdf
+2024-12-02 10:41:53.417383 INFO::Writing association plots (one for each significant association) to output folder: PL_Long_phylum_no_d8
+2024-12-02 10:41:53.418135 INFO::Plotting associations from most to least significant, grouped by metadata
+2024-12-02 10:41:53.418579 INFO::Plotting data for metadata number 1, Day_Num
+2024-12-02 10:41:53.419274 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Bacteroidetes
+2024-12-02 10:41:53.497772 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:41:53.498123 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Firmicutes
+2024-12-02 10:41:53.567851 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:41:53.568188 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Verrucomicrobia
+2024-12-02 10:41:53.646164 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2024-12-02 10:41:53.646501 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.__
+2024-12-02 10:41:53.703437 DEBUG::`geom_smooth()` using formula = 'y ~ x'
