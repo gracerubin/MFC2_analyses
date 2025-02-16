@@ -1113,6 +1113,46 @@ Lactobacillales_relative_abundance %>%
 ```
 Seems to have decreased in PL mice, but started from baseline at an abnormally high level. 
 
+# Bonus 9: The genus SMB53 within the family Clostridiaceae
+
+- This is a genus that popped up a couple times in my early Maaslin2 studies as increasing in abundance in PGH mice, so I decided to make my own plots of its relative abundance here.
+
+```{r SMB53 plot 1}
+# Bonus 9: genus SMB53 in Mollucutes
+SMB53_relative_abundance <- phylo_nonabx_long %>%
+  filter(Genus == "SMB53") %>%
+  group_by(Sample, Hormone, Day, TimePoint, Mouse_Num) %>%
+  summarize(SMB53 = sum(Relative_abundance)) %>%
+  ungroup()
+
+SMB53_relative_abundance %>%
+  filter(Day != "D8" & Hormone != "PL") %>% 
+  ggplot(aes(x = Day, 
+             y = SMB53, 
+             color = Hormone, 
+             group = Hormone)) +
+    geom_jitter(position = position_jitter(width = 0.15), 
+              size = 2, 
+              alpha = 0.6) +
+  stat_summary(geom = "pointrange", linewidth = .7) +
+  stat_summary(geom = "line", linewidth = 0.7) + hormone_group_colors +
+  labs(title = "SMB53 Longitudinally \nAcross Hormone Groups", y = "SMB53 Relative Abundance") 
+
+SMB53_relative_abundance %>%
+  filter(Day == "D5") %>% 
+  ggplot(aes(x = Hormone, 
+             y = SMB53, 
+             color = Hormone)) +
+  geom_boxplot() + 
+  geom_jitter(position = position_jitter(width = 0.15), 
+              size = 2, 
+              alpha = 0.6) +
+  hormone_group_colors +
+  labs(title = "SMB53 at Day 5 \nAcross Hormone Groups", y = "SMB53 Relative Abundance") + 
+  stat_compare_means(comparisons = list(c("Saline", "PGH")),
+            method = "t.test", paired = F, label = "p.format")
+```
+
 ## 3.d.iii. Whole Body Taxonomic Composition
 
 I'm going to start by looking at phylum-level taxonomic composition across groups.

@@ -1,0 +1,970 @@
+---
+title: 'Child Doc 10: Maaslin2'
+author: "Grace Rubin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+<!-- This is the child document containing data visualizations and statistical analyses for MFC2 Maaslin2 Data -->
+
+```{r setup child 10, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  warning = FALSE, 
+  message = FALSE, 
+  collapse = TRUE,
+  fig.height = 1, 
+  fig.width = 1, 
+  fig.align = 'center',
+  comment = NA
+)
+
+# loading packages
+library(ggpubr)
+library(nlme)
+library(tidyverse)
+library(here)
+library(knitr)
+library(DT)
+library(lme4)
+library(lmerTest) 
+library(phyloseq)
+library(vegan)
+library(qiime2R)
+library(Maaslin2)
+library(readr)  
+```
+
+## 3.e. Overview
+
+- This section compiles and summarizes all Maaslin2 analyses conducted for MFC2. 
+
+- Rather than rerunning the analyses and regenerating output files, this document presents a comprehensive overview of the results using figures and tables generated in prior files (both on github for easy reference). This avoids redundant file creation and allows me to embed Maaslin2 outputs directly into this file. 
+
+- Within each category, Maaslin2 analyses were conducted at all taxonomic levels.
+
+Analysis categories include:
+
+i. **Cross-Sectional Analyses** -- Identifying significant microbial differences between PL or PGH groups and saline controls at a given time point
+
+ii. **Longitudinal Analyses** -- Identifying significant microbial differences over time within each group
+
+iii. **Pre-Post Intervention Analyses** -- Identifying microbial changes in response to hormonal intervention (comparing pre- vs. post-intervention time points, incorporating multiple measurements per mouse)
+
+iv. **Microbiome-Metabolic Correlation Analyses** -- Assessing relationships between specific microbial taxa and various metabolic metrics:
+
+  + **Glucose metabolism** (endpoint OGTT and ITT AUCs, fasting blood glucose levels)
+
+  + **Body composition** via EchoMRI (lean, fat, total, and free water) 
+  
+
+  + **Weight** (absolute and relative to baseline)
+  
+  + The above analyses were conducted both in terms of within-group variation (i.e., does individual microbiome variation correlates with individual metabolic variation within a group?) and cross-group variation (i.e., testing whether study-wide metabolic variation influences microbiome composition more than hormonal group affiliation)
+    
+Each section will include a brief methodological explanation before presenting the corresponding results.
+
+## 3.e.i. Cross-Sectional Analyses
+
+When comparing PGH or PL mice to Saline mice including all intervention day samples (D0 and beyond), we get no significant results. 
+
+## 3.e.ii. Longitudinal Analyses
+
+### Saline 
+
+I did not test for significant microbial differences between baseline and intervention days for mice given just saline, because I wasn't sure what the value would be at this stage. But I am happy to if we think it would be beneficial! 
+
+***
+
+### PGH 
+
+I tested for significant longitudinal microbial differences in mice given PGH. 
+
+#### Phylum Level:
+
+```{r 3eii pgh phylum figure 1}
+knitr::include_graphics(here("PGH_Long_phylum_no_d8/figures", "Day_Num_1.png"))
+
+knitr::include_graphics(here("PGH_Long_phylum_no_d8/figures", "Day_Num_2.png"))
+
+knitr::include_graphics(here("PGH_Long_phylum_no_d8/figures", "Day_Num_3.png"))
+``` 
+
+Here is the statistical info on the significant result above:
+```{r 3eii pgh phylum stats}
+results_df_3eii_pgh_phylum <- read_tsv(here("PGH_Long_phylum_no_d8", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eii_pgh_phylum)
+```
+
+- Increases were seen in the phyla *Tenericutes* and *Bacteroidetes*
+
+- Decreases were seen in the phylum *Actinobacteria*
+
+#### Class Level:
+
+At the class level, nothing popped up as significant after correcting for FDR, but it appears that enrichment in *Tenericutes* is driven by the class *Mollicutes* (unadjusted p = 0.022).
+
+#### Order Level:
+
+At the order level, nothing popped up as significant after correcting for FDR, but it appears that enrichment in *Mollicutes* is driven by an order called "RF39" (unadjusted p = 0.022).
+
+#### Family AND Genus Level:
+
+*Note: Many of the family-level trends here could then be differentiated to the genus level. To make this document easier to follow, when applicable, I am going to nest those trends here, presenting the family information and then the related genus-level plots directly after.*
+
+- There was a significant decrease in the family *Streptomycetaceae*, which is in the phylum *Actinobacteria*, which showed a general trend of decreased abundance.  
+
+```{r 3eii pgh family figure 1}
+knitr::include_graphics(here("PGH_Long_family_no_d8/figures", "Day_Num_8.png"))
+``` 
+
+This trend was predominantly driven by the genus *Streptomyces*.
+
+```{r 3eii pgh genus figure 1}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_1.png"))
+``` 
+
+- Though directions of effect differed, significant effects were found in five different families within the order *Clostridiales* 
+  
+  1. *Lachnospiraceae* (decrease)
+  
+```{r 3eii pgh family figure 2}
+knitr::include_graphics(here("PGH_Long_family_no_d8/figures", "Day_Num_2.png"))
+``` 
+  
+  (here's another strong figure showing that *Lachnospiraceae* decrease, but from day 0 to 5):
+```{r 3eii pgh family figure bonus 2}
+knitr::include_graphics(here("Weight_family_PGH_b/figures", "Day_Num_1.png"))
+``` 
+  
+This trend was driven by decreases in three different genera within this family:
+  
+  a. *Epulopiscium*
+  
+```{r 3eii pgh genus figure 2}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_9.png"))
+``` 
+
+  b. *Blautia*
+  
+```{r 3eii pgh genus figure 3}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_10.png"))
+``` 
+  
+  c. *Lachnospira*
+
+```{r 3eii pgh genus figure 4}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_15.png"))
+``` 
+  
+  2. *Eubacteriaceae* (increase)
+  
+```{r 3eii pgh family figure 3}
+knitr::include_graphics(here("PGH_Long_family_no_d8/figures", "Day_Num_3.png"))
+``` 
+  
+This trend was predominantly driven by the genus *Pseudoramibacter*.  
+
+```{r 3eii pgh genus figure 5}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_5.png"))
+``` 
+
+  3. *Peptococcaceae* (decrease)
+  
+```{r 3eii pgh family figure 4}
+knitr::include_graphics(here("PGH_Long_family_no_d8/figures", "Day_Num_4.png"))
+``` 
+  
+This trend was predominantly driven by a genus noted as "rc4.4".  
+
+```{r 3eii pgh genus figure 6}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_6.png"))
+``` 
+
+  4. *Dehalobacteriaceae* (decrease)
+  
+```{r 3eii pgh family figure 5}
+knitr::include_graphics(here("PGH_Long_family_no_d8/figures", "Day_Num_5.png"))
+``` 
+  
+(here's another strong figure showing that *Dehalobacteriaceae* decrease, but from day 0 to 5):
+```{r 3eii pgh family figure bonus 5}
+knitr::include_graphics(here("Weight_family_PGH_b/figures", "Day_Num_3.png"))
+``` 
+  
+This trend was predominantly driven by the genus *Dehalobacterium*.  
+
+```{r 3eii pgh genus figure 7}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_7.png"))
+``` 
+
+  5. *Clostridiaceae* (increase)
+  
+```{r 3eii pgh family figure 6}
+knitr::include_graphics(here("PGH_Long_family_no_d8/figures", "Day_Num_6.png"))
+``` 
+  
+  (here is also a figure for *Clostridiaceae* increases in PGH mice from days 0 to 5):
+```{r 3eii pgh family bonus figure 6}
+knitr::include_graphics(here("Weight_family_PGH_b/figures", "Day_Num_2.png"))
+``` 
+  
+This trend was predominantly driven by a genus noted as "SMB53".  
+
+```{r 3eii pgh genus figure 8}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_4.png"))
+``` 
+
+- There was also a general decrease of *Clostridiales* that could not be differentiated to the family level
+
+```{r 3eii pgh family figure 7}
+knitr::include_graphics(here("PGH_Long_family_no_d8/figures", "Day_Num_1.png"))
+``` 
+
+- Additionally, the order "RF39" noted above, though not further differentiated, did pop up as significant at this level
+
+```{r 3eii pgh family figure 8}
+knitr::include_graphics(here("PGH_Long_family_no_d8/figures", "Day_Num_7.png"))
+``` 
+  
+Here is the statistical info on the significant result above:
+```{r 3eii pgh family stats}
+results_df_3eii_pgh_family <- read_tsv(here("PGH_Long_family_no_d8", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eii_pgh_family)
+```
+
+#### Genus Level:
+
+- 8 of the genus-level analyses were included above under their corresponding family-level analyses that also were significant. 
+
+- Excluding those, there were significant *decreases* in 4 genera:
+
+  1. *Faecalibacterium*
+
+```{r 3eii pgh genus figure 9}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_17.png"))
+``` 
+  
+  2. *Jeotgalicoccus*
+  
+```{r 3eii pgh genus figure 10}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_18.png"))
+``` 
+    
+  3. *Lactococcus*
+
+```{r 3eii pgh genus figure 11}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_20.png"))
+``` 
+  
+  4. *Oscillospira*
+  
+```{r 3eii pgh genus figure 12}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_22.png"))
+``` 
+  
+- There were also 4 new families that popped up as significant in this analysis that lack genus-level identification, despite not appearing in the family-level analysis round. 
+  - Of these, two are in the phylum *Proteobacteria*, which both increased:
+  
+  1. *Rhodobacteraceae*
+  
+```{r 3eii pgh genus figure 13}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_14.png"))
+``` 
+  
+  2. *Methylobacteriaceae*
+  
+```{r 3eii pgh genus figure 14}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_19.png"))
+``` 
+
+  - The other two families are *Firmicutes*, and they decreased:
+    
+  1. *Paenibacillaceae*
+  
+```{r 3eii pgh genus figure 15}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_8.png"))
+``` 
+  
+  2. *Ruminococcaceae* (same family as the genus Faecalibacterium that also popped up separately above)
+  
+```{r 3eii pgh genus figure 16}
+knitr::include_graphics(here("PGH_Long_genus_no_d8/figures", "Day_Num_16.png"))
+``` 
+  
+Here is the statistical info on the significant result above:
+```{r 3eii pgh genus stats}
+results_df_3eii_pgh_genus <- read_tsv(here("PGH_Long_genus_no_d8", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eii_pgh_genus)
+```
+
+#### Species Level:
+
+(Through D5):
+None of the groups identified above could be narrowed down by Maaslin beyond the genus level, so the species-level plots are all identical to those above. 
+
+(Through D5): 
+We saw significant longitudinal decreases in the following species:
+```{r 3eii pgh species figure 1}
+knitr::include_graphics(here("PGH_Long/figures", "Day_Num_1.png"))
+
+knitr::include_graphics(here("PGH_Long/figures", "Day_Num_2.png"))
+``` 
+
+We saw significant longitudinal increases in the following species:
+```{r 3eii pgh species figure 2}
+knitr::include_graphics(here("PGH_Long/figures", "Day_Num_3.png"))
+
+knitr::include_graphics(here("PGH_Long/figures", "Day_Num_4.png"))
+
+knitr::include_graphics(here("PGH_Long/figures", "Day_Num_5.png"))
+``` 
+
+Here is the statistical info on the significant result above:
+```{r 3eii pgh species stats}
+results_df_3eii_pgh_species <- read_tsv(here("PGH_Long", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eii_pgh_species)
+```
+
+- None of these could be identified at the species level, but both decreases came from the family *Lachnospiraceae*, with the first plot unable to differentiate beyond family and the second able to get down to the genus *Lachnospira*
+
+- Increases were seen in the order *Clostridiales*, with Maaslin also able to distinguish that some (but not all) of these increases were driven by members of the genus *Ruminococcus*. 
+
+- Increases were also seen in the family *Lactobacillaceae*. 
+
+NOTE: The weirdness of our Day 8 samples could be driving these trends. 
+***
+
+### PL
+
+I tested for significant longitudinal microbial differences in mice given PL. Because I was very skeptical of D8 values, I ran analysis at all levels that stopped at D5:
+
+#### Phylum Level:
+
+```{r 3eii pl phylum figure 1}
+knitr::include_graphics(here("PL_Long_phylum_no_d8/figures", "Day_Num_1.png"))
+
+knitr::include_graphics(here("PL_Long_phylum_no_d8/figures", "Day_Num_2.png"))
+
+knitr::include_graphics(here("PL_Long_phylum_no_d8/figures", "Day_Num_3.png"))
+``` 
+
+Here is the statistical info on the significant result above:
+```{r 3eii pl phylum stats}
+results_df_3eii_pl_phylum <- read_tsv(here("PL_Long_phylum_no_d8", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eii_pl_phylum)
+```
+
+- We see a mild longitudinal enrichment of *Bacteroidetes* and depletion of *Firmicutes*
+
+- We also see a mild enrichment of *Verrucomicrobia*
+
+#### Class Level:
+
+At the class level, nothing popped up as significant after correcting for FDR, but it appears that enrichment in *Bacteroidetes* is driven by the class *Bacteroidia* (unadjusted p = 0.027) and enrichment in *Verrucomicrobia* is driven by the class *Verrucomicrobiae* (unadjusted p = 0.044). 
+
+#### Order Level:
+
+```{r 3eii pl order figure 1}
+knitr::include_graphics(here("PL_Long_order_no_d8/figures", "Day_Num_1.png"))
+``` 
+
+Here is the statistical info on the significant result above:
+```{r 3eii pl order stats}
+results_df_3eii_pl_order <- read_tsv(here("PL_Long_order_no_d8", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eii_pl_order)
+```
+
+- Depletion of *Firmicutes* appears to be dominantly driven by the order *Lactobacillales*
+
+#### Family Level:
+
+At the family level, nothing popped up as significant after correcting for FDR, but the depletion of *Lactobacillales* seems to be driven by the family *Lactobacillaceae* (unadjusted p = 0.00076). 
+
+Several other adjusted p values also were fairly low. See table below: 
+
+```{r 3eii pl family stats}
+results_df_3eii_pl_family <- read_tsv(here("PL_Long_family_no_d8", "all_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eii_pl_family)
+```
+
+#### Genus Level:
+
+```{r 3eii pl genus figure 1}
+knitr::include_graphics(here("PL_Long_genus_no_d8/figures", "Day_Num_2.png"))
+
+knitr::include_graphics(here("PL_Long_genus_no_d8/figures", "Day_Num_5.png"))
+``` 
+
+Significant depletion was identified in the following genera of *Firmicutes*: 
+
+- *Lactobacillus*
+
+- *Catenibacterium*
+
+```{r 3eii pl genus figure 2}
+knitr::include_graphics(here("PL_Long_genus_no_d8/figures", "Day_Num_1.png"))
+
+knitr::include_graphics(here("PL_Long_genus_no_d8/figures", "Day_Num_4.png"))
+``` 
+
+Additionally, the following *Firmicutes* families showed significant depletion, but only popped up as significant in the genus-level analysis, despite not being able to be identified beyond the family level: 
+
+- *Lactobacillaceae* (as noted above)
+
+- *Erysipelotrichaceae* 
+
+Here is the statistical info on the significant result above (out of order from presentation of figures above):
+```{r 3eii pl genus stats}
+results_df_3eii_pl_genus <- read_tsv(here("PL_Long_genus_no_d8", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eii_pl_genus)
+```
+
+#### Species Level (through D5):
+
+None of the groups identified above could be narrowed down by Maaslin beyond the genus level, so the species-level plots are all identical to those above. 
+
+#### Species Level (through D8):
+
+To show my suspicious of the D8 samples, this is an example of what one of the species-level trends look like including those days. 
+
+```{r 3eii pl species d8 figures}
+knitr::include_graphics(here("PL_Long_species/figures", "Day_Num_7.png"))
+``` 
+
+To me, this trend look clearly driven by D8 contamination. 
+
+***
+
+## 3.e.iii. Pre-Post Intervention Analyses
+
+### Saline 
+
+I did not test for significant microbial differences between baseline and intervention days for mice given just saline, because I wasn't sure what the value would be at this stage. But I am happy to if we think it would be beneficial! 
+
+***
+
+### PGH 
+
+I tested for significant microbial differences between baseline and intervention days for mice given PGH. 
+
+#### Phylum Level:
+
+```{r 3eiii pgh phylum figure 1}
+knitr::include_graphics(here("PGH_Phylum/figures", "TimePoint_1.png"))
+``` 
+
+Here is the statistical info on the significant result above (it's only one result so it's a bit boring of a table):
+```{r 3eiii pgh phylum stats}
+results_df_3eiii_pgh_phylum <- read_tsv(here("PGH_Phylum", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiii_pgh_phylum)
+```
+
+PGH injected-mice had a significant enrichment in *Tenericutes*.
+
+#### Class Level:
+
+```{r 3eiii pgh class figure 1}
+knitr::include_graphics(here("PGH_Class/figures", "TimePoint_1.png"))
+``` 
+
+Here is the statistical info on the significant result above:
+```{r 3eiii pgh class stats}
+results_df_3eiii_pgh_class <- read_tsv(here("PGH_Class", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiii_pgh_class)
+```
+
+The enrichment in *Tenericutes* is predominantly within the *Mollicutes* class.
+
+#### Order Level:
+
+```{r 3eiii pgh order figure 1}
+knitr::include_graphics(here("PGH_Order/figures", "TimePoint_1.png"))
+``` 
+
+Here is the statistical info on the significant result above:
+```{r 3eiii pgh order stats}
+results_df_3eiii_pgh_order <- read_tsv(here("PGH_Order", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiii_pgh_order)
+```
+
+The enrichment in *Mollicutes* is predominantly within an order called "RF 39."
+
+#### Family Level:
+
+```{r 3eiii pgh family figure 1}
+knitr::include_graphics(here("PGH_Family/figures", "TimePoint_1.png"))
+
+knitr::include_graphics(here("PGH_Family/figures", "TimePoint_2.png"))
+``` 
+
+Here is the statistical info on the significant results above:
+```{r 3eiii pgh family stats}
+results_df_3eiii_pgh_family <- read_tsv(here("PGH_Family", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiii_pgh_family)
+```
+
+- Within that order "RF 39," we are not able to get any additional information on the family, genus, or species that is enriched. Because of this I will not show the subsequent identical figures for the lower taxonomic levels.
+
+- There is also significant depletion of a family called *Peptococcaceae*
+
+#### Genus Level:
+
+```{r 3eiii pgh genus figure 1}
+knitr::include_graphics(here("PGH_Genus/figures", "TimePoint_2.png"))
+``` 
+
+Here is the statistical info on the significant results above:
+```{r 3eiii pgh genus stats}
+results_df_3eiii_pgh_genus <- read_tsv(here("PGH_Genus", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiii_pgh_genus)
+```
+
+Within *Peptococcaceae*, depletion is predominantly within a genus called "rc4.4" 
+
+#### Species Level:
+
+Within that genus "rc4.4," Maaslin cannot give species-level information, so the figures and stats are redundant and won't be repeated.
+
+***
+
+### PL 
+
+I tested for significant microbial differences between baseline and intervention days for mice given PL.
+
+#### Phylum Level:
+
+```{r 3eiii pl phylum figure 1}
+knitr::include_graphics(here("PL_Phylum/figures", "TimePoint_1.png"))
+
+knitr::include_graphics(here("PL_Phylum/figures", "TimePoint_2.png"))
+``` 
+
+Here is the statistical info on the significant results above:
+```{r 3eiii pl phylum stats}
+results_df_3eiii_pl_phylum <- read_tsv(here("PL_Phylum", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiii_pl_phylum)
+```
+
+Matching the results we found in phyloseq, pl-exposed mice showed an enrichment in *Bacteroidetes* and a depletion in *Firmicutes*.
+
+#### Class Level:
+
+```{r 3eiii pl class figure 1}
+knitr::include_graphics(here("PL_Class/figures", "TimePoint_1.png"))
+``` 
+
+Here is the statistical info on the significant result above:
+```{r 3eiii pl class stats}
+results_df_3eiii_pl_class <- read_tsv(here("PL_Class", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiii_pl_class)
+```
+
+- It appears the depletion in *Firmicutes* was spread across many lower level taxa, because no classes showed significance
+
+- The enrichment in *Bacteroidetes* was predominantly within the class *Bacteroidia*
+
+#### Order Level:
+
+```{r 3eiii pl order figure 1}
+knitr::include_graphics(here("PL_Order/figures", "TimePoint_1.png"))
+``` 
+
+Here is the statistical info on the significant result above:
+```{r 3eiii pl order stats}
+results_df_3eiii_pl_order <- read_tsv(here("PL_Order", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiii_pl_order)
+```
+
+The enrichment in *Bacteroidia* was predominantly within the order *Bacteroidiales*.
+
+#### Family Level:
+
+At the family level, *Bacteroidiales* enrichment appears to have been concentrated within two families, *Porphyromonadaceae* and one called "S24.7." However, while unadjusted p values were significant (p = 0.005 and 0.009, respectively), with false discovery correction, neither reached significance. 
+
+#### Genus Level:
+
+- Within *Porphyromonadaceae*, the family that popped up as significant when p was unadjusted but not with false discovery correction, the majority of the effect came from the genus *Parabacteroides* (unadjusted p =  0.009)
+
+- From what I see online, *Parabacteroides* is considered a common gut commensal. It has also been found to "alleviate obesity and obesity-related dysfunctions in mice" (Wang *et al*, 2019 paper in Cell Reports), and has specifically been linked to glycemic control. 
+
+- My quick lit search shows that *Parabacteroides* pops up a lot in GDM research, but is inconsistently found to be positively or negatively correlated. Kuang *et al*. (2017) did shotgun on healthy and GDM patients in the 2nd-3rd trimester (21–29 weeks) and found both that GDM patients had significantly higher *Parabacteroides* levels, but also that women with *Parabacteroides* abundance positively correlated with glucose levels during an OGTT. Their random forest model found that: *"Bacterial species providing the highest discriminatory power were primarily members of the... Parabacteroides genera ...consistent with our observation that Parabacteroides is the predominant genus accounting for differences in the gut microbiome between GDM patients and controls."* Dong *et al*. (2020) and Su *et al*. (2021) also found that GDM patients had a significantly higher relative abundance of *Parabacteroides,* as well as that "HOMA-IR increased with the higher abundance genus of *Parabacteroides*". In contrast, Cortez *et al*. (2018) and Ma *et al*. (2020), found that healthy pregnant women had higher levels of *Parabacteroides* than GDM women. Ma *et al*. additionally found that women with higher *Parabacteroides* had lower fasting blood glucose levels. 
+
+- In CD1 mice, Priyadarshini *et al*. (2017 -- one of my fav papers) found that *Parabacteroides* were highest at D0 and gradually decreased during pregnancy, continuing to decrease through postpartum day 3. 
+
+#### Species Level:
+
+Within *Parabacteroides*, the genus that popped up as significant when p was unadjusted but not with false discovery correction, the majority of the effect came from the species *gordonii*. Unadjusted p =  0.009). 
+
+***
+
+## 3.e.iv. Microbiome-Metabolic Correlation Analyses
+
+### Glucose Metabolism
+
+#### Endpoint OGTT AUCs
+
+I had high hopes for this but nothing popped up as significant.
+
+#### Endpoint ITT AUCs
+
+The only significant effect found was at the level of order: *Clostridia* has a negative correlation with ITT AUC. A smaller ITT AUC indicates lower insulin resistance. So, mice with greater *Clostridia* levels also had greater insulin sensitivity. This effect held true when hormone both was and was not included as a random effect. The figure and stats below are for it not being included as a random effect. 
+
+```{r 3eiv ITT AUC figure 1}
+knitr::include_graphics(here("Endpoint_ITT_AUC_all_hormones_no_fixed_order/figures", "AUC_1.png"))
+``` 
+
+Here is the statistical info for this result:
+```{r 3eiv ITT AUC stats 1}
+results_df_3eiv_ITT_AUC_stats <- read_tsv(here("Endpoint_ITT_AUC_all_hormones_no_fixed_order", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_ITT_AUC_stats)
+```
+
+#### Endpoint fasting blood glucose levels
+
+I ran these analyses two different ways: with hormone group included as a random effect, and not included. 
+
+When hormone is not included as a random effect, four taxonomic groups pop out as significant. 
+
+1. *Akkermansia muciniphila* has a positive correlation with fasting BG levels.
+
+```{r 3eiv fasting bg figure 1}
+knitr::include_graphics(here("Endpoint_OGTT_fastingBG_all_hormones_species_a/figures", "Time_0_1.png"))
+``` 
+
+2. *Plesiomonas shigelloides* has a positive correlation with fasting BG levels. *However*, all but two samples had none of this bug, so the effect is driven by two mice with both high fasting BG and measurable levels of this bug.
+
+```{r 3eiv fasting bg figure 2}
+knitr::include_graphics(here("Endpoint_OGTT_fastingBG_all_hormones_species_a/figures", "Time_0_2.png"))
+``` 
+
+3. The family *Coriobacteriaceae* in the phylum *Actinobacteria* has a positive correlation with fasting BG levels.
+
+```{r 3eiv fasting bg figure 3}
+knitr::include_graphics(here("Endpoint_OGTT_fastingBG_all_hormones_species_a/figures", "Time_0_3.png"))
+``` 
+
+4. The genus *Megamonas* has a negative correlation with fasting BG levels. *However*, all but three samples had none of this bug, so the effect is driven by two mice with both low fasting BG and measurable levels of this bug.
+
+```{r 3eiv fasting bg figure 4}
+knitr::include_graphics(here("Endpoint_OGTT_fastingBG_all_hormones_species_a/figures", "Time_0_4.png"))
+``` 
+
+Here is the statistical info for these results:
+```{r 3eiv fasting bg stats 1}
+results_df_3eiv_fastingbg_stats_1 <- read_tsv(here("Endpoint_OGTT_fastingBG_all_hormones_species_a", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_fastingbg_stats_1)
+```
+
+When hormone is included as a random effect, the significance for those four taxonomic groups remains fairly unchanged, with the exception of the p-value for *Megamonas* increasing from 0.02 to 0.002. 
+
+### Body Composition
+
+#### Lean mass
+
+I was unsure the ideal way to run these analyses, so I did them a few ways. First, I included lean masses from both timepoints, with individual mouse and time point included as random effects. This is basically ignoring the effects of the hormones.  
+
+NOTE: These plots all say lean mass *percentage* as the x axis, but are actually showing *absolute* lean mass. I ran these analyses before I realized the EchoMRI returns absolute and not relative lean mass values. 
+
+I only ran this analysis as the genus level (cannot remember why), and found the following:
+
+- A negative correlation between *Akkermansia* (presumably muciniphila) and lean mass. However, this seems to be driven by two samples with very low lean mass and very high *Akkermansia* loads. 
+
+```{r 3eiv lean mass figure 1}
+knitr::include_graphics(here("Echo_lean_genus_c/figures", "Lean_mass_percentage_1.png"))
+``` 
+
+- A positive correlation between the family *Clostridiaceae* and lean mass. This seems to be particularly driven by a genus called "SMB53." 
+
+```{r 3eiv lean mass figure 2}
+knitr::include_graphics(here("Echo_lean_genus_c/figures", "Lean_mass_percentage_2.png"))
+
+knitr::include_graphics(here("Echo_lean_genus_c/figures", "Lean_mass_percentage_3.png"))
+``` 
+
+In previous mouse studies, including Zhang *et al*. (2024), "SMB53 showed a stronger positive correlation with body weight, white adipose tissues, liver weight and AA metabolites, and a simultaneously negative correlation with the anti-inflammatory cytokine IL-10."
+
+Here is the statistical info for these results:
+```{r 3eiv lean mass stats 1}
+results_df_3eiv_lean_genus_stats_1 <- read_tsv(here("Echo_lean_genus_c", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_lean_genus_stats_1)
+```
+
+I then analyzed lean mass only at endpoint, accounting for hormone group as a fixed effect. The output for this was a little funky -- it didn't make plots for me, but the full results table shows some interesting things:
+
+```{r 3eiv lean mass stats 2}
+results_df_3eiv_lean_genus_stats_2 <- read_tsv(here("Echo_lean_genus_d", "all_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_lean_genus_stats_2)
+```
+
+Here are my takeaways:
+
+- *SMB53*, which was positively associated with lean mass, was (unsurprisingly) also positively associated with being a PGH mouse (p = 0.035). 
+
+- 3 new genera popped up as having associations with lean mass:
+
+1. *Prevotella* -- positively correlated, p = 0.019
+
+2. *Jeotgalicoccus* -- positively correlated, p = 0.018 (was previously found to decrease in PGH, which is surprising) 
+
+3. *Coprococcus* -- negatively correlated, p = 0.005
+
+- I probably should go back and run this analysis at all taxonomic levels, but for now this is what I have.
+
+#### Fat mass 
+
+Similarly, I started with looking at fat masses from both timepoints, with individual mouse and time point included as random effects. This is basically ignoring the effects of the hormones.  
+
+I found a positive correlation with the Proteobacterium *Gallibacterium*, but it was only at non-zero levels in 6 out of 36 samples. 
+
+```{r 3eiv fat mass figure 1}
+knitr::include_graphics(here("Echo_fat_genus_c/figures", "Fat_percentage_2.png"))
+``` 
+
+When I analyzed fat mass only at endpoint, accounting for hormone group as a fixed effect, I found no significant associations. 
+
+#### Free and total water
+
+I wasn't super interested in these, but there were tons of significant correlations with both. I'll include the significance tables for both at the genus level below:
+
+**Free water**
+
+```{r 3eiv free water stats}
+results_df_3eiv_free_water_stats <- read_tsv(here("Echo_freewater_genus_a", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_free_water_stats)
+```
+
+And here are the figures (I'll keep them tiny):
+```{r 3eiv free water figures 1}
+knitr::include_graphics(here("Echo_freewater_genus_a/figures", "Free_water_percentage_1.png"))
+
+knitr::include_graphics(here("Echo_freewater_genus_a/figures", "Free_water_percentage_2.png"))
+
+knitr::include_graphics(here("Echo_freewater_genus_a/figures", "Free_water_percentage_3.png"))
+
+knitr::include_graphics(here("Echo_freewater_genus_a/figures", "Free_water_percentage_4.png"))
+
+knitr::include_graphics(here("Echo_freewater_genus_a/figures", "Free_water_percentage_5.png"))
+``` 
+
+**Total water**
+
+```{r 3eiv total water stats}
+results_df_3eiv_total_water_stats <- read_tsv(here("Echo_totalwater_genus_a", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_free_water_stats)
+```
+
+And here are the figures (I'll keep them tiny):
+```{r 3eiv total water figures 1}
+knitr::include_graphics(here("Echo_totalwater_genus_a/figures", "Total_water_percentage_1.png"))
+
+knitr::include_graphics(here("Echo_totalwater_genus_a/figures", "Total_water_percentage_2.png"))
+
+knitr::include_graphics(here("Echo_totalwater_genus_a/figures", "Total_water_percentage_3.png"))
+
+knitr::include_graphics(here("Echo_totalwater_genus_a/figures", "Total_water_percentage_4.png"))
+
+knitr::include_graphics(here("Echo_totalwater_genus_a/figures", "Total_water_percentage_5.png"))
+
+knitr::include_graphics(here("Echo_totalwater_genus_a/figures", "Total_water_percentage_6.png"))
+
+knitr::include_graphics(here("Echo_totalwater_genus_a/figures", "Total_water_percentage_7.png"))
+
+knitr::include_graphics(here("Echo_totalwater_genus_a/figures", "Total_water_percentage_8.png"))
+``` 
+
+#### Complete body composition heat map
+I also looked at genus-level correlations between the four body comp variables and microbial taxa, and got this heat map:
+
+I'm not sure how to interpret it though...
+
+```{r 3eiv body comp figure 1}
+knitr::include_graphics(here("Body_comp_genus_a", "heatmap.png"))
+``` 
+
+
+### Weight
+
+I started with looking at microbial associations with weight for ALL mice, not considering hormone or day as effects, but including mouse ID as a random effect. To me, this is asking if, ignoring the experiment itself, can variation in weight across our samples be correlated with certain microbial taxa? 
+
+I ran this at the phylum and genus level, and found many significant effects for both. I won't include ALL of the figures here, but will show the full table of significant results, and highlight some key taxa. 
+
+**Phylum Level:**
+```{r 3eiv weight phylum stats 1}
+results_df_3eiv_weight_phylum_stats_1 <- read_tsv(here("Weight_phylum_a", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_weight_phylum_stats_1)
+```
+
+These results seems to correlate with commonly understood microbial correlations with adiposity: higher *Firmicutes*, *Proteobacteria*, and *Actinobacteria,* and lower *Bacteroidetes* and *Verrucomicrobia*.
+
+Here is the figure for *Firmicutes*:
+```{r 3eiv weight phylum figure 1}
+knitr::include_graphics(here("Weight_phylum_a/figures", "Weight_g_1.png"))
+``` 
+
+**Genus Level:**
+```{r 3eiv weight genus stats 1}
+results_df_3eiv_weight_genus_stats_1 <- read_tsv(here("Weight_genus_a", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_weight_genus_stats_1)
+```
+
+Many of these taxa also popped up on our longitudinal analyses of the hormone groups (e.g., Lactobacillaceae, *Faecalibacterium*, *Clostridium*, *Megamonas*, etc.)
+
+Several are also well-studied in the context of metabolism and body mass, like *Akkermansia*, *Blautia*, *Bacteroides*, and *Lactobacillus*. 
+
+Here are the plots for *Lactobacillus*, *Akkermansia*, and *Bacteroides*: 
+
+*Lactobacillus*
+```{r 3eiv weight genus figure 1}
+knitr::include_graphics(here("Weight_genus_a/figures", "Weight_g_1.png"))
+``` 
+
+*Akkermansia*
+```{r 3eiv weight genus figure 2}
+knitr::include_graphics(here("Weight_genus_a/figures", "Weight_g_10.png"))
+``` 
+
+*Bacteroides*
+```{r 3eiv weight genus figure 3}
+knitr::include_graphics(here("Weight_genus_a/figures", "Weight_g_21.png"))
+``` 
+
+I next wanted to run analyses looking to integrate this into our actual experimental design. We can't really parse out cause and effect, but I wanted to know if either 
+a) Hormone exposure-driven changes in weight produce corresponding shifts in microbiome composition, or 
+b) Hormone exposure-driven changes in microbiome composition produce corresponding shifts in weight. 
+
+I wasn't sure what to include as fixed and random effects, and I didn't want to miss any interesting results, so I ran a bunch of different combinations (with mouse ID always included as a random effect):
+
+2. Hormone as a fixed effect with an interaction term (Weight:Hormone), and day as a random effect
+
+3. Analyses run on each hormone group independently with day as a random effect
+
+4. Analyses run on each hormone group independently with day as a fixed effect, filtering out the weird day 8 data 
+
+Here are the stats for analysis 1:
+
+**Phylum Level:**
+```{r 3eiv weight phylum stats 2}
+results_df_3eiv_weight_phylum_stats_2 <- read_tsv(here("Weight_phylum_b", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_weight_phylum_stats_2)
+```
+
+**Genus Level:**
+```{r 3eiv weight genus stats 2}
+results_df_3eiv_weight_genus_stats_2 <- read_tsv(here("Weight_genus_b", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_weight_genus_stats_2)
+```
+
+The second analysis narrowed down our list of significant genera (see stats table below). Interestingly, one genus, **"SMB53"** within *Clostridiaceae*, which did not appear in our initial analysis list, now emerges as both positively associated with body weight AND with the PGH group. No other taxa appeared to be significantly associated with both weight and hormone group from this analysis. 
+
+Here are the associated figures for **"SMB53"**:
+```{r 3eiv weight genus figure 4}
+knitr::include_graphics(here("Weight_genus_b/figures", "Weight_g_12.png"))
+
+knitr::include_graphics(here("Weight_genus_b/figures", "Hormone_1.png"))
+``` 
+
+In the third analysis, day was included as a random effect and each hormone group was assessed independently.
+
+In the PGH-dosed mice, significant weight-taxa correlations (done at genus and family level) were limited to "SMB53", *Akkermansia*, *Mogibacteriaceae*, *Bacillales*, *Streptophyta*, and *Lactobacillaceae*. 
+
+In the PL-dosed mice, significant weight-taxa correlations (done at genus level) were primarily limited to members of *Lactobacillales*. Here is the full list: 
+```{r 3eiv weight pl genus stats 1}
+results_df_3eiv_weight_genus_pl_stats_1 <- read_tsv(here("Weight_genus_PL", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_weight_genus_pl_stats_1)
+``` 
+
+As an example, here is the figure showing the correlation of *Lactobacillus* abundance and weight in PL mice: 
+```{r 3eiv weight pl genus figure 1}
+knitr::include_graphics(here("Weight_genus_PL/figures", "Weight_g_1.png"))
+``` 
+
+This is relationship is also very clear at the order level of *Lactobacillales*:
+```{r 3eiv weight pl order bonus figure 1}
+knitr::include_graphics(here("Weight_order_PL_b/figures", "Weight_g_1.png"))
+``` 
+
+In fourth analysis, day was included as fixed effect and day 8 samples were filtered out (for each hormone group independently).
+
+In the PGH mice, **"SMB53"** appeared again, showing a significant increase over time and with increasing weight: 
+```{r 3eiv weight genus figure 5}
+knitr::include_graphics(here("Weight_genus_PGH_b/figures", "heatmap.png"))
+``` 
+
+Other than that, the PGH correlations with time and with weight largely match those discussed above.
+
+In PL mice, there was no overlap in the taxa that significantly changed over time and that significantly explained within-group weight variation. However, this analysis also highlighted the strong longitudinal decreases in the order *Clostridiales* in PL mice. I re-ran the analysis at the order level to make this figure demonstrating that: 
+
+```{r 3eiv pl order bonus figure 1}
+knitr::include_graphics(here("Weight_order_PL_b/figures", "Day_Num_4.png"))
+``` 
+
+Here's the genus-level stats:
+```{r 3eiv weight pl genus stats 2}
+results_df_3eiv_weight_genus_pl_stats_2 <- read_tsv(here("Weight_genus_PL_b", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_weight_genus_pl_stats_2)
+``` 
+
+And here's the order-level stats:
+```{r 3eiv weight pl order stats 1}
+results_df_3eiv_weight_order_pl_stats_1 <- read_tsv(here("Weight_order_PL_b", "significant_results.tsv"))
+
+# Display as an interactive table
+datatable(results_df_3eiv_weight_order_pl_stats_1)
+``` 
