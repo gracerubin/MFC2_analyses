@@ -1,0 +1,95 @@
+2025-02-16 16:36:02.127677 INFO::Writing function arguments to log file
+2025-02-16 16:36:02.230451 DEBUG::Function arguments
+2025-02-16 16:36:02.234944 DEBUG::Output folder: Weight_order_PL_b
+2025-02-16 16:36:02.235117 DEBUG::Min Abundance: 0.000000
+2025-02-16 16:36:02.23527 DEBUG::Min Prevalence: 0.100000
+2025-02-16 16:36:02.235418 DEBUG::Normalization: TSS
+2025-02-16 16:36:02.235559 DEBUG::Transform: LOG
+2025-02-16 16:36:02.235719 DEBUG::Analysis method: LM
+2025-02-16 16:36:02.235866 DEBUG::Max significance: 0.250000
+2025-02-16 16:36:02.236019 DEBUG::Random effects: Mouse_ID
+2025-02-16 16:36:02.236175 DEBUG::Fixed effects: Weight_g,Day_Num
+2025-02-16 16:36:02.23635 DEBUG::Correction method: BH
+2025-02-16 16:36:02.236502 DEBUG::Standardize: TRUE
+2025-02-16 16:36:02.236666 DEBUG::Cores: 1
+2025-02-16 16:36:02.236827 INFO::Verifying options selected are valid
+2025-02-16 16:36:02.288721 INFO::Determining format of input files
+2025-02-16 16:36:02.289463 INFO::Input format is data samples as rows and metadata samples as rows
+2025-02-16 16:36:02.290383 DEBUG::The following samples were found to have features but no metadata. They will be removed. HEB24001,HEB24002,HEB24003,HEB24004,HEB24005,HEB24006,HEB24009,HEB24011,HEB24012,HEB24013,HEB24014,HEB24015,HEB24016,HEB24017,HEB24018,HEB24019,HEB24020,HEB24021,HEB24022,HEB24023,HEB24024,HEB24025,HEB24026,HEB24027,HEB24028,HEB24029,HEB24030,HEB24031,HEB24032,HEB24033,HEB24034,HEB24035,HEB24036,HEB24037,HEB24038,HEB24039,HEB24040,HEB24041,HEB24042,HEB24043,HEB24044,HEB24045,HEB24046,HEB24047,HEB24048,HEB24049,HEB24050,HEB24051,HEB24052,HEB24053,HEB24054,HEB24055,HEB24056,HEB24057,HEB24058,HEB24059,HEB24060,HEB24061,HEB24062,HEB24063,HEB24064,HEB24066,HEB24068,HEB24069,HEB24070,HEB24071,HEB24072,HEB24073,HEB24074,HEB24075,HEB24076,HEB24077,HEB24078,HEB24079,HEB24080,HEB24081,HEB24082,HEB24083,HEB24084,HEB24085,HEB24086,HEB24087,HEB24088,HEB24089,HEB24090,HEB24091,HEB24092,HEB24093,HEB24094,HEB24095,HEB24096,HEB24101,HEB24102,HEB24103,HEB24104,HEB24105,HEB24106,HEB24107,HEB24108,HEB24109,HEB24110,HEB24112,HEB24113,HEB24114,HEB24115,HEB24116,HEB24117,HEB24118,HEB24119,HEB24121,HEB24122,HEB24124,HEB24125,HEB24126,HEB24127,HEB24128,HEB24129,HEB24130,HEB24131,HEB24132,HEB24133,HEB24134,HEB24135,HEB24136,HEB24137,HEB24138,HEB24145,HEB24146,HEB24147,HEB24148,HEB24149,HEB24150,HEB24151,HEB24152,HEB24153,HEB24154,HEB24155,HEB24156,HEB24157,HEB24158,HEB24159,HEB24160,HEB24161,HEB24162,HEB24163,HEB24164,HEB24165,HEB24166,HEB24167,HEB24168,HEB24169,HEB24170,HEB24171,HEB24172,HEB24173,HEB24174,HEB24175,HEB24176,HEB24177,HEB24178,HEB24179,HEB24180,HEB24181,HEB24182,HEB24183,HEB24184,HEB24185,HEB24186,HEB24187,HEB24188,HEB24189,HEB24190,HEB24191,HEB24192,HEB24193,HEB24194,HEB24195,HEB24196,HEB24197,HEB24198
+2025-02-16 16:36:02.290626 DEBUG::A total of 18 samples were found in both the data and metadata
+2025-02-16 16:36:02.2908 DEBUG::Reordering data/metadata to use same sample ordering
+2025-02-16 16:36:02.291404 INFO::Formula for random effects: expr ~ (1 | Mouse_ID)
+2025-02-16 16:36:02.291883 INFO::Formula for fixed effects: expr ~  Weight_g + Day_Num
+2025-02-16 16:36:02.292302 INFO::Filter data based on min abundance and min prevalence
+2025-02-16 16:36:02.292662 INFO::Total samples in data: 18
+2025-02-16 16:36:02.293165 INFO::Min samples required with min abundance for a feature not to be filtered: 1.800000
+2025-02-16 16:36:02.294641 INFO::Total filtered features: 20
+2025-02-16 16:36:02.296268 INFO::Filtered feature names from abundance and prevalence filtering: k__Archaea.p__Euryarchaeota.c__Halobacteria.o__Halobacteriales, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Caulobacterales, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__, k__Bacteria.p__Firmicutes.c__Clostridia.o__, k__Bacteria.p__Firmicutes.c__Clostridia.o__Natranaerobiales, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhodobacterales, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Alteromonadales, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Cardiobacteriales, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Sphingomonadales, k__Bacteria.p__Chloroflexi.c__Thermomicrobia.o__JG30.KF.CM45, k__Bacteria.p__Proteobacteria.c__Epsilonproteobacteria.o__Campylobacterales, k__Bacteria.p__Bacteroidetes.c__Flavobacteriia.o__Flavobacteriales, k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__MKC10, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhodospirillales, k__Bacteria.p__Spirochaetes.c__Spirochaetes.o__Spirochaetales, k__Bacteria.p__Actinobacteria.c__Thermoleophilia.__, k__Bacteria.p__.Thermi..c__Deinococci.o__Thermales, k__Bacteria.p__Verrucomicrobia.__.__, k__Bacteria.p__Proteobacteria.c__Deltaproteobacteria.o__Myxococcales, k__Bacteria.p__Actinobacteria.__.__
+2025-02-16 16:36:02.299064 INFO::Total filtered features with variance filtering: 0
+2025-02-16 16:36:02.299463 INFO::Filtered feature names from variance filtering:
+2025-02-16 16:36:02.299867 INFO::Running selected normalization method: TSS
+2025-02-16 16:36:02.303014 INFO::Applying z-score to standardize continuous metadata
+2025-02-16 16:36:02.314663 INFO::Running selected transform method: LOG
+2025-02-16 16:36:02.315689 INFO::Running selected analysis method: LM
+2025-02-16 16:36:02.322239 INFO::Fitting model to feature number 1, k__Bacteria.p__Bacteroidetes.c__Bacteroidia.o__Bacteroidales
+2025-02-16 16:36:02.441201 INFO::Fitting model to feature number 2, k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales
+2025-02-16 16:36:02.466933 INFO::Fitting model to feature number 3, k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales
+2025-02-16 16:36:02.495849 INFO::Fitting model to feature number 4, k__Bacteria.p__Firmicutes.c__Bacilli.o__Turicibacterales
+2025-02-16 16:36:02.51812 INFO::Fitting model to feature number 5, k__Bacteria.p__Verrucomicrobia.c__Verrucomicrobiae.o__Verrucomicrobiales
+2025-02-16 16:36:02.558683 INFO::Fitting model to feature number 6, k__Bacteria.__.__.__
+2025-02-16 16:36:02.588637 INFO::Fitting model to feature number 7, k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales
+2025-02-16 16:36:02.621732 INFO::Fitting model to feature number 8, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Enterobacteriales
+2025-02-16 16:36:02.65827 INFO::Fitting model to feature number 9, k__Bacteria.p__Cyanobacteria.c__Chloroplast.o__Streptophyta
+2025-02-16 16:36:02.713079 INFO::Fitting model to feature number 10, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rickettsiales
+2025-02-16 16:36:02.729464 INFO::Fitting model to feature number 11, k__Bacteria.p__Firmicutes.c__Erysipelotrichi.o__Erysipelotrichales
+2025-02-16 16:36:02.746151 INFO::Fitting model to feature number 12, k__Bacteria.p__Firmicutes.c__Clostridia.__
+2025-02-16 16:36:02.763607 INFO::Fitting model to feature number 13, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pseudomonadales
+2025-02-16 16:36:02.78067 INFO::Fitting model to feature number 14, k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Actinomycetales
+2025-02-16 16:36:02.797406 INFO::Fitting model to feature number 15, k__Bacteria.p__Tenericutes.c__Mollicutes.o__RF39
+2025-02-16 16:36:02.814381 INFO::Fitting model to feature number 16, k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Bifidobacteriales
+2025-02-16 16:36:02.835211 INFO::Fitting model to feature number 17, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__RF32
+2025-02-16 16:36:02.85323 INFO::Fitting model to feature number 18, k__Bacteria.p__Firmicutes.__.__
+2025-02-16 16:36:02.8704 INFO::Fitting model to feature number 19, k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales
+2025-02-16 16:36:02.900395 INFO::Fitting model to feature number 20, k__Bacteria.p__Deferribacteres.c__Deferribacteres.o__Deferribacterales
+2025-02-16 16:36:02.917434 INFO::Fitting model to feature number 21, Unassigned.__.__.__
+2025-02-16 16:36:02.935364 INFO::Fitting model to feature number 22, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Xanthomonadales
+2025-02-16 16:36:02.952742 INFO::Fitting model to feature number 23, k__Bacteria.p__Bacteroidetes.__.__
+2025-02-16 16:36:02.969605 INFO::Fitting model to feature number 24, k__Bacteria.p__Actinobacteria.c__Actinobacteria.__
+2025-02-16 16:36:02.986449 INFO::Fitting model to feature number 25, k__Bacteria.p__Actinobacteria.c__Coriobacteriia.o__Coriobacteriales
+2025-02-16 16:36:03.003724 INFO::Fitting model to feature number 26, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhizobiales
+2025-02-16 16:36:03.020565 INFO::Fitting model to feature number 27, k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.__
+2025-02-16 16:36:03.037803 INFO::Fitting model to feature number 28, k__Bacteria.p__Firmicutes.c__Bacilli.__
+2025-02-16 16:36:03.055821 INFO::Fitting model to feature number 29, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales
+2025-02-16 16:36:03.08634 INFO::Fitting model to feature number 30, k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.__
+2025-02-16 16:36:03.108621 INFO::Counting total values for each feature
+2025-02-16 16:36:03.110254 INFO::Writing filtered data to file Weight_order_PL_b/features/filtered_data.tsv
+2025-02-16 16:36:03.112871 INFO::Writing filtered, normalized data to file Weight_order_PL_b/features/filtered_data_norm.tsv
+2025-02-16 16:36:03.11427 INFO::Writing filtered, normalized, transformed data to file Weight_order_PL_b/features/filtered_data_norm_transformed.tsv
+2025-02-16 16:36:03.115471 INFO::Writing residuals to file Weight_order_PL_b/fits/residuals.rds
+2025-02-16 16:36:03.117106 INFO::Writing fitted values to file Weight_order_PL_b/fits/fitted.rds
+2025-02-16 16:36:03.117986 INFO::Writing extracted random effects to file Weight_order_PL_b/fits/ranef.rds
+2025-02-16 16:36:03.118488 INFO::Writing all results to file (ordered by increasing q-values): Weight_order_PL_b/all_results.tsv
+2025-02-16 16:36:03.119351 INFO::Writing the significant results (those which are less than or equal to the threshold of 0.250000 ) to file (ordered by increasing q-values): Weight_order_PL_b/significant_results.tsv
+2025-02-16 16:36:03.119852 INFO::Writing heatmap of significant results to file: Weight_order_PL_b/heatmap.pdf
+2025-02-16 16:36:03.173859 INFO::Writing association plots (one for each significant association) to output folder: Weight_order_PL_b
+2025-02-16 16:36:03.175308 INFO::Plotting associations from most to least significant, grouped by metadata
+2025-02-16 16:36:03.175746 INFO::Plotting data for metadata number 1, Day_Num
+2025-02-16 16:36:03.176333 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Firmicutes.c__Bacilli.o__Turicibacterales
+2025-02-16 16:36:03.289072 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2025-02-16 16:36:03.289424 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rickettsiales
+2025-02-16 16:36:03.375928 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2025-02-16 16:36:03.376334 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.__.__.__
+2025-02-16 16:36:03.433774 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2025-02-16 16:36:03.434115 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales
+2025-02-16 16:36:03.490115 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2025-02-16 16:36:03.490445 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Firmicutes.c__Clostridia.__
+2025-02-16 16:36:03.557581 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2025-02-16 16:36:03.557918 INFO::Creating scatter plot for continuous data, Day_Num vs k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Actinomycetales
+2025-02-16 16:36:03.618831 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2025-02-16 16:36:04.09779 INFO::Plotting data for metadata number 2, Weight_g
+2025-02-16 16:36:04.098553 INFO::Creating scatter plot for continuous data, Weight_g vs k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales
+2025-02-16 16:36:04.166841 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2025-02-16 16:36:04.167173 INFO::Creating scatter plot for continuous data, Weight_g vs k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales
+2025-02-16 16:36:04.22456 DEBUG::`geom_smooth()` using formula = 'y ~ x'
+2025-02-16 16:36:04.224961 INFO::Creating scatter plot for continuous data, Weight_g vs k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pseudomonadales
+2025-02-16 16:36:04.296796 DEBUG::`geom_smooth()` using formula = 'y ~ x'

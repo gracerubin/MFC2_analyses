@@ -1,0 +1,16 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Lactobacillaceae.g__Lactobacillus	Weight_g	Weight_g	0.278908249290912	0.0480153444556225	18	18	3.44519866435128e-05	0.0059257417026842
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Turicibacterales.f__Turicibacteraceae.g__Turicibacter	Day_Num	Day_Num	1.80902000227267	0.352138304065297	18	18	0.000229804117550792	0.0197631541093681
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales.f__.Exiguobacteraceae..g__	Weight_g	Weight_g	0.241892947955046	0.0569275187817538	18	18	0.000699942954382019	0.0401300627179024
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Streptococcaceae.g__Streptococcus	Weight_g	Weight_g	0.190737220119323	0.0528683948441056	18	18	0.00258413589359661	0.0774641482527334
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.__.__	Day_Num	Day_Num	-0.499939396427919	0.137324307168486	18	18	0.00315105137870078	0.0774641482527334
+k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rickettsiales.f__mitochondria.g__Lardizabala	Day_Num	Day_Num	-0.29782074523608	0.0807222430581989	18	18	0.00315261068470427	0.0774641482527334
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Lachnospiraceae.g__	Day_Num	Day_Num	-0.685462090078609	0.181677658055655	18	18	0.00241707609186453	0.0774641482527334
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Leuconostocaceae.g__	Weight_g	Weight_g	0.234693620300865	0.0681501717771449	18	18	0.0036177888480702	0.0777824602335092
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__.g__	Day_Num	Day_Num	-0.719467708010861	0.206928828632008	18	18	0.00434791187463557	0.0830934269374798
+k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Actinomycetales.f__Intrasporangiaceae.g__	Day_Num	Day_Num	-0.545681910798632	0.170905484090123	18	4	0.00796105900401037	0.136930214868978
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Lachnospiraceae.g__Epulopiscium	Day_Num	Day_Num	-0.525160114683522	0.178820257553954	18	18	0.0118630023073756	0.170036366405717
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Dehalobacteriaceae.g__Dehalobacterium	Day_Num	Day_Num	-0.554038214045716	0.187195799213002	18	18	0.0115098217730019	0.170036366405717
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Streptococcaceae.g__Lactococcus	Weight_g	Weight_g	0.199644036767364	0.0708521939429266	18	18	0.0129859054759835	0.171813518605321
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Ruminococcaceae.g__Oscillospira	Day_Num	Day_Num	-0.670975902994113	0.240580040392143	18	18	0.0162008180266886	0.199038621470746
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Ruminococcaceae.__	Day_Num	Day_Num	-0.581546677562426	0.220503731236578	18	18	0.0211124915208056	0.242089902771904

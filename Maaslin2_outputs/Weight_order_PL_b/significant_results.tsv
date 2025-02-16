@@ -1,0 +1,10 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Turicibacterales	Day_Num	Day_Num	1.80902753900097	0.352138154460168	18	18	0.000229795348220893	0.0137877208932536
+k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rickettsiales	Day_Num	Day_Num	-0.297813012353082	0.0807231969541773	18	18	0.00315339325483673	0.094601797645102
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales	Weight_g	Weight_g	1.34690788536551	0.479524603081339	18	18	0.0240182890208826	0.233360263940081
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales	Weight_g	Weight_g	0.213698506320485	0.0578462472381983	18	18	0.0140509006614881	0.233360263940081
+k__Bacteria.__.__.__	Day_Num	Day_Num	-0.201097014795759	0.0783058975092675	18	18	0.0239047176894448	0.233360263940081
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales	Day_Num	Day_Num	-0.437893368230124	0.170394468632183	18	18	0.023501214063533	0.233360263940081
+k__Bacteria.p__Firmicutes.c__Clostridia.__	Day_Num	Day_Num	-0.765658953036755	0.31371547033754	18	18	0.0275442582015092	0.233360263940081
+k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pseudomonadales	Weight_g	Weight_g	0.176585209103347	0.0761894955770445	18	18	0.0350040395910121	0.233360263940081
+k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Actinomycetales	Day_Num	Day_Num	-0.216510762933997	0.0923089513515035	18	18	0.0331668950419061	0.233360263940081
