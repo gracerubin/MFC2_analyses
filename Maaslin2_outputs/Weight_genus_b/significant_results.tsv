@@ -1,0 +1,17 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Lactobacillaceae.g__Lactobacillus	Weight_g	Weight_g	0.176232742788131	0.0292291681357971	72	72	7.56162797999822e-08	1.92821513489955e-05
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales.f__.Exiguobacteraceae..g__	Weight_g	Weight_g	0.13497165777448	0.030678189713661	72	72	3.92034365085995e-05	0.00499843815484644
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Streptococcaceae.g__Streptococcus	Weight_g	Weight_g	0.11816460291366	0.0280605612045561	72	72	7.6485951725271e-05	0.00650130589664803
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Lactobacillaceae.g__	Weight_g	Weight_g	1.10199589241844	0.246071296233498	72	72	0.000114105148388836	0.00727420320978832
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Leuconostocaceae.g__	Weight_g	Weight_g	0.148581386047281	0.0373236645252957	72	72	0.000169498170803523	0.00864440671097969
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Ruminococcaceae.g__Faecalibacterium	Weight_g	Weight_g	0.152037450325402	0.0437716293739207	72	72	0.00212713599898271	0.0904032799567651
+k__Bacteria.p__Bacteroidetes.c__Bacteroidia.o__Bacteroidales.f__S24.7.g__	Weight_g	Weight_g	-0.418021282256772	0.13165102926452	72	72	0.00327838245181603	0.100122787999282
+k__Bacteria.p__Verrucomicrobia.c__Verrucomicrobiae.o__Verrucomicrobiales.f__Verrucomicrobiaceae.g__Akkermansia	Weight_g	Weight_g	-0.472391691231192	0.157470134178076	72	72	0.00378421323098521	0.100122787999282
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Streptococcaceae.g__Lactococcus	Weight_g	Weight_g	0.10972515886016	0.0362268288605609	72	72	0.00347452047119649	0.100122787999282
+k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__RF32.f__.g__	Weight_g	Weight_g	0.166500428886432	0.0557600072084184	72	72	0.00392638384310908	0.100122787999282
+k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Actinomycetales.f__Brevibacteriaceae.g__Brevibacterium	Weight_g	Weight_g	0.288362108179159	0.0947087992247241	72	59	0.00597096847593542	0.138417905578503
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__SMB53	Weight_g	Weight_g	0.645323220891226	0.240363954393634	72	72	0.0097473006433756	0.207130138671731
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__SMB53	Hormone	PGH	2.17758696612692	0.764274020929846	72	72	0.0126683103697312	0.225290042647821
+k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Actinomycetales.f__Streptomycetaceae.g__Streptomyces	Weight_g	Weight_g	0.353975378824757	0.136561396334935	72	54	0.0117440446281693	0.225290042647821
+k__Bacteria.p__Actinobacteria.c__Actinobacteria.o__Actinomycetales.f__Dermabacteraceae.g__Brachybacterium	Weight_g	Weight_g	0.37952137529284	0.144656337114884	72	30	0.0141358458131966	0.225290042647821
+k__Bacteria.p__Bacteroidetes.__.__.__.__	Hormone	PGH	-0.912132097205723	0.323407755437673	72	43	0.0139695291427679	0.225290042647821
