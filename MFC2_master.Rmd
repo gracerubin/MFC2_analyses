@@ -1,0 +1,140 @@
+---
+title: "MFC2 Data Analysis Master Document"
+author: "Grace Rubin"
+date: "`r format(Sys.Date(), '%B, %d, %Y')`"
+always_allow_html: true
+output:
+  word_document:
+    toc: true
+  pdf_document:
+    toc: true
+    toc_depth: '5'
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 5
+    theme: simplex
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup master, include=FALSE}
+# We will be using the here package
+#install.packages("here")
+library(here)
+library(knitr)
+library(ggpubr)
+library(nlme)
+library(tidyverse)
+library(here)
+library(knitr)
+library(DT)
+
+# Set working directory using here package
+here::i_am("MFC2_master.Rmd")
+# Other global settings
+knitr::opts_chunk$set(echo = FALSE,
+  warning = FALSE,
+  message = FALSE)
+
+```
+
+# **Overview**
+
+This is the master document organizing all MFC2 data analyses! Think of this as a data summary + table of contents. Specific analyses will be conducted and figured generated within linked RMarkdown files, acting like chapters. With this file, you can easily locate specific analyses of interest. 
+
+## *Study Design and Main Goals Review*
+**MFC2** = "Maternal-Fetal Conflict 2" = 2nd pilot study investigating the role of the gut microbiome in mediating maternal-fetal conflict over gestational energy allocation. 
+  
+We investigated two main questions in this pilot: 
+
+  1. How do placental lactogen *(PL)* and placental growth hormone *(PGH)* alter the composition of the gut microbiome?
+
+  2. To what extent are the metabolic effects of each hormone dependent on the presence of a gut microbiome?  
+
+Here's an unpolished schematic overview of the study design: 
+```{r Study Design, fig.asp=1, out.width="100%", fig.align='center'}
+
+knitr::include_graphics(here("figures", "MFC2_study_design_schematic.png"))
+
+``` 
+ 
+* We had six different groups spread out over two arms. In the first arm, we had groups for mice receiving each of the two hormones, as well as a group of mice injected with saline as the control group.
+  + This allows to target our first question and assess the effect of each hormone on gut microbiome composition using fecal samples taken over the course of the experiment. 
+
+* Our second experimental arm used mice that received high doses of antibiotics (enrofloxacin + ampicillin) in their drinking water to knock down the gut microbiome. This allowed us to see the effects of each hormone on metabolism in mice with a typical gut microbiome and those with a greatly reduced microbial load.
+  + This allows us to identify what, if any, of the metabolic effects of these hormones might occur through interactions with the gut microbiome. 
+  
+***
+  
+## *Data Structure*
+
+Here's a schematic overview of the various data types collected and analyses that were run:
+```{r Flowchart, fig.asp=1, out.width="100%", fig.align='center'}
+
+knitr::include_graphics(here("figures", "MFC2_data_flowchart.png"))
+
+``` 
+
+***
+
+# **1. Endpoint Phenotypic Data**
+
+Note: This was probably the least interesting data collected. 
+```{r Endpoint Phenotypic Data, child = 'MFC2_Child1_Endpoint.Rmd', results = 'asis'}
+
+```
+
+***
+
+# **2. Metabolic Data**
+
+# 2.a. Glucose and Insulin Tolerance
+```{r OGTT and ITT Data, child = 'MFC2_Child2_ToleranceTests.Rmd', results = 'asis'}
+
+```
+
+# 2.b. Body Composition
+```{r EchoMRI Data, child = 'MFC2_Child3_EchoMRI.Rmd', results = 'asis'}
+
+```
+
+# 2.c. Weight
+```{r Weight Data, child = 'MFC2_Child4_Weight.Rmd', results = 'asis'}
+
+```
+
+# 2.d. Food Consumption
+```{r Food Consumption Data, child = 'MFC2_Child5_Food.Rmd', results = 'asis'}
+
+```
+
+***
+
+# **3. Microbiome Data**
+
+# 3.a. qPCR (Bacterial Density)
+```{r qPCR Data, child = 'MFC2_Child6_qPCR.Rmd', results = 'asis'}
+
+```
+
+# 3.b. Alpha Diversity
+```{r Alpha Diversity, child = 'MFC2_Child7_Alpha_Diversity.Rmd', results = 'asis'}
+
+```
+
+# 3.c. Beta Diversity
+```{r Beta Diversity, child = 'MFC2_Child8_Beta_Diversity.Rmd', results = 'asis'}
+
+```
+
+# 3.d. `phyloseq` Relative Abundance Analyses
+```{r Relative Abundances, child = 'MFC2_Child9_Relative_Abundance.Rmd', results = 'asis'}
+
+```
+
+# 3.e. `Maaslin2` Analyses
+```{r Maaslin2, child = 'MFC2_Child10_Maaslin2.Rmd', results = 'asis'}
+
+```
+
