@@ -1,0 +1,4 @@
+feature	metadata	value	coef	stderr	N	N.not.0	pval	qval
+k__Bacteria.p__Firmicutes.c__Bacilli.o__Lactobacillales.f__Lactobacillaceae.g__	Weight_g	Weight_g	1.46333409378908	0.452927392568789	24	24	0.00633191690433765	0.177293673321454
+k__Bacteria.p__Verrucomicrobia.c__Verrucomicrobiae.o__Verrucomicrobiales.f__Verrucomicrobiaceae.g__Akkermansia	Weight_g	Weight_g	-0.558852327535386	0.178061453788534	24	24	0.00523316264585601	0.177293673321454
+k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Clostridiaceae.g__SMB53	Weight_g	Weight_g	1.24849502041998	0.359590107554873	24	24	0.00233785521630592	0.177293673321454
